@@ -1,0 +1,198 @@
+{
+  "title": "What If the Moon Vanished Tonight?",
+  "slug": "moon-vanished",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "theme": {
+    "primaryColor": "#FFB347",
+    "secondaryColor": "#12162E",
+    "accentColor": "#FF5E3A",
+    "fontFamily": "StudioSansBold"
+  },
+  "showNarration": true,
+  "narration": [
+    { "frameStart": 12, "text": "At 11:58 PM, the Moon was exactly where it should be." },
+    { "frameStart": 318, "text": "Two minutes later, it simply was not there." },
+    { "frameStart": 624, "text": "Nothing fell. Nothing burned. The sky just went quiet." },
+    { "frameStart": 930, "text": "By morning, the oceans had forgotten what pulled them." },
+    { "frameStart": 1236, "text": "The Moon never left. We did." }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "type": "vector_environment",
+      "durationFrames": 300,
+      "background": "dusk_room",
+      "backgroundOptions": { "sun": { "x": 1460, "y": 250, "r": 74 }, "seed": 31, "stars": 44 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        {
+          "type": "glow",
+          "x": 1460,
+          "y": 250,
+          "width": 460,
+          "height": 460,
+          "intensity": 0.26
+        },
+        {
+          "type": "character",
+          "x": 1440,
+          "y": 906,
+          "scale": 1.2,
+          "action": "idle",
+          "expression": "neutral"
+        },
+        {
+          "type": "text_overlay",
+          "text": "11:58 PM",
+          "eyebrow": "WHAT IF…?",
+          "sub": "One minute before the Moon leaves.",
+          "x": 132,
+          "y": 210,
+          "size": "hero",
+          "align": "left",
+          "animation": "slide_up",
+          "delay": 15
+        },
+        { "type": "hud_chip", "label": "MOON DISTANCE", "value": "384,400 km", "tone": "gold", "x": 132, "y": 540 }
+      ],
+      "sfx": ["ambience"]
+    },
+    {
+      "id": "scene_2",
+      "type": "vector_environment",
+      "durationFrames": 300,
+      "background": "open_horizon",
+      "backgroundOptions": { "sun": { "r": 0, "rays": false }, "seed": 7, "stars": 130, "depth": 3, "dim": 0.12 },
+      "camera": "slow_zoom_out",
+      "elements": [
+        { "type": "particles", "count": 46, "seed": 12, "opacity": 0.5 },
+        {
+          "type": "character",
+          "x": 900,
+          "y": 1010,
+          "scale": 1.34,
+          "action": "panicked",
+          "actionStart": 45,
+          "expression": "shocked"
+        },
+        {
+          "type": "text_overlay",
+          "text": "THE MOON IS GONE",
+          "eyebrow": "00:01",
+          "sub": "No impact. No sound. Just an empty sky.",
+          "x": 130,
+          "y": 170,
+          "animation": "spring_pop",
+          "delay": 10
+        },
+        { "type": "hud_chip", "label": "TIDAL FORCE", "value": "0.00 N", "tone": "alert", "x": 130, "y": 500 }
+      ],
+      "sfx": ["sub_drop"]
+    },
+    {
+      "id": "scene_3",
+      "type": "vector_environment",
+      "durationFrames": 300,
+      "background": "twilight_skyline",
+      "backgroundOptions": { "sun": { "x": 1240, "y": 640, "r": 120, "rays": true }, "seed": 44, "depth": 3 },
+      "camera": "pan_down",
+      "elements": [
+        {
+          "type": "character",
+          "x": 560,
+          "y": 900,
+          "scale": 1.26,
+          "action": "panicked",
+          "actionStart": 30,
+          "expression": "shocked"
+        },
+        {
+          "type": "text_overlay",
+          "text": "THE TIDES GO SLACK",
+          "eyebrow": "06:00",
+          "sub": "Every coastline, at once.",
+          "x": 118,
+          "y": 150,
+          "animation": "spring_pop",
+          "delay": 12
+        },
+        { "type": "hud_chip", "label": "SEA LEVEL", "value": "+0.00 m", "tone": "alert", "x": 118, "y": 470 }
+      ],
+      "sfx": ["rumble"]
+    },
+    {
+      "id": "scene_4",
+      "type": "vector_environment",
+      "durationFrames": 300,
+      "background": "dome_interior",
+      "backgroundOptions": { "seed": 12, "stars": 28 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        { "type": "glow", "x": 1280, "y": 560, "width": 520, "height": 520, "intensity": 0.2 },
+        {
+          "type": "character",
+          "x": 1330,
+          "y": 1000,
+          "scale": 1.3,
+          "action": "panicked",
+          "actionStart": 20,
+          "expression": "shocked"
+        },
+        {
+          "type": "fracture",
+          "path": "M 980 120 L 1060 300 L 1010 430 L 1120 560",
+          "strokeWidth": 3,
+          "delay": 60,
+          "revealFrames": 90
+        },
+        {
+          "type": "text_overlay",
+          "text": "NO ONE SAW IT LEAVE",
+          "eyebrow": "09:30",
+          "sub": "The observatories were all looking the wrong way.",
+          "x": 118,
+          "y": 160,
+          "animation": "fade",
+          "delay": 20
+        },
+        { "type": "hud_chip", "label": "TELESCOPES ALERTED", "value": "9", "tone": "gold", "x": 118, "y": 470 }
+      ],
+      "sfx": ["alarm"]
+    },
+    {
+      "id": "scene_5",
+      "type": "vector_environment",
+      "durationFrames": 300,
+      "background": "floating_staircase",
+      "backgroundOptions": { "seed": 21, "stars": 60, "depth": 3 },
+      "camera": "slow_zoom_out",
+      "elements": [
+        { "type": "particles", "count": 60, "seed": 5, "opacity": 0.35 },
+        {
+          "type": "character",
+          "x": 1400,
+          "y": 960,
+          "scale": 1.18,
+          "action": "idle",
+          "expression": "neutral",
+          "flip": true
+        },
+        {
+          "type": "text_overlay",
+          "text": "WE DID",
+          "eyebrow": "EPILOGUE",
+          "sub": "The Moon never moved. Our orbit did.",
+          "x": 128,
+          "y": 220,
+          "size": "hero",
+          "animation": "slide_up",
+          "delay": 24
+        },
+        { "type": "hud_chip", "label": "NEXT QUESTION", "value": "?", "tone": "gold", "x": 128, "y": 540 }
+      ],
+      "sfx": ["whoosh"]
+    }
+  ]
+}
