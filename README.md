@@ -74,14 +74,16 @@ No system fonts are needed — the studio bundles its own (see `studio/src/fonts
 | `studio/tsconfig.json` | Config | `react-jsx`, strict, bundler resolution; scoped to `studio/src`. |
 | `studio/src/index.ts` | Entry | `registerRoot(RemotionRoot)`; also imports the font registration. |
 | `studio/src/Root.tsx` | Composition | Registers `WhatIfMoon`: 1920×1080, 30 fps, 1,600 frames. |
-| `studio/src/MainSequence.tsx` | Timeline | Lays the four scenes out as sequential 400-frame `<Sequence>` blocks. |
-| `studio/src/DeskScene.tsx` | Scene 1 | Bedroom window; the Moon pops at frame 110, sky dies, "RIGHT NOW" lands. |
-| `studio/src/StaircaseScene.tsx` | Scene 2 | Floating cat, drifting dust, panicked character, "ANOMALY SECTOR: HALLWAY". |
-| `studio/src/CitySkylineScene.tsx` | Scene 3 | Skyline under a widening "temporal rift", "GLOBAL HORIZON: FRACTURED". |
-| `studio/src/ObservatoryScene.tsx` | Scene 4 | Pulsing control room, "CRITICAL ERROR: TIME CHANNELS DESYNCHRONIZED". |
-| `studio/src/Character.tsx` | Component | Shared vector character (`x`, `y`, `scale`, `action`, `expression`). |
-| `studio/src/fonts.ts` | Module | Registers the bundled DejaVu Sans / Sans Mono faces with `loadFont`. |
-| `studio/public/fonts/` | Assets | Bundled `DejaVuSans.ttf` and `DejaVuSansMono.ttf` (Bitstream Vera / DejaVu licence). |
+| `studio/src/MainSequence.tsx` | Timeline | Lays the four scenes out as sequential 400-frame `<Sequence>` blocks and dips each chapter in/out of black. |
+| `studio/src/theme.ts` | Design system | Palette, sky gradients, `track`/`fadeIn`/`pop`/`camera` motion helpers, type scale. |
+| `studio/src/Atmosphere.tsx` | Components | `Sky` (gradient + sun + rotating rays + stars), `Ridge`, `CityLine`, `Particles`, `Vignette`, `Title`, `HudChip`. |
+| `studio/src/DeskScene.tsx` | Scene 1 | Dusk bedroom; the Moon bursts at frame 110, the sky drains, the title lands. |
+| `studio/src/StaircaseScene.tsx` | Scene 2 | Floating staircase over a burning horizon, drifting rocks, hovering cat, "GRAVITY LETS GO". |
+| `studio/src/CitySkylineScene.tsx` | Scene 3 | Three parallax skyline bands under a setting sun, gold fractures, "THE SKY CRACKS". |
+| `studio/src/ObservatoryScene.tsx` | Scene 4 | Domed control room, amber consoles, sweeping beacon, "SYNC LOST". |
+| `studio/src/Character.tsx` | Component | Shared SVG character (`x`, `y`, `scale`, `action`, `expression`, `actionStart`, `flip`). |
+| `studio/src/fonts.ts` | Module | Registers the bundled DejaVu Sans / Sans Bold / Sans Mono faces with `loadFont`. |
+| `studio/public/fonts/` | Assets | Bundled `DejaVuSans.ttf`, `DejaVuSans-Bold.ttf` and `DejaVuSansMono.ttf` (Bitstream Vera / DejaVu licence). |
 | `studio/out/` | Output | Renders and stills; git-ignored (`out` is in `.gitignore`). |
 | `what-if-moon.mp4` | Video | Earlier Moon edit (17,003,667 bytes, 1920×1080, **18.7 s, with AAC audio**). It predates the current scenes and is *not* reproducible from `studio/` — see [Video provenance](#video-provenance). |
 | `opencode.json` | Config | [opencode](https://opencode.ai) agent config: free OpenRouter Llama 3 8B model. |
@@ -113,45 +115,73 @@ The storyboard beats map onto the timeline as follows:
 
 The scenes are thematic interpretations of the storyboard, not literal frames of it.
 
+### Visual language
+
+The studio renders in a flat-vector, warm-twilight style: layered silhouettes, glowing skies, gold
+key light, and heavy display type. The rules live in `theme.ts` (`PALETTE`, `SKY`, `NIGHT_SKY`,
+`TYPE`) and `Atmosphere.tsx` (the primitives), so a new scene composes the same film rather than
+inventing its own look:
+
+* **Layering** — `<Sky>` (gradient, sun disc with soft halo and slowly rotating masked rays, seeded
+  stars, horizon haze) → `<Ridge>` / `<CityLine>` (midground silhouettes at increasing drift speed) →
+  the scene's own set → `<Particles>` + `<Vignette>` (foreground depth).
+* **Palette** — deep indigo/violet shadows (`ink` → `violet`) against a magenta→ember→amber horizon,
+  with `gold`/`goldSoft` reserved for light sources, lit windows and focal type. `signal` blue is the
+  only cool accent and is used for system readouts.
+* **Typography** — `Title` draws a tracked uppercase eyebrow, a heavy gold header, a gold gradient
+  rule that wipes in, and white subtext, all on the real 700-weight face with layered text shadows.
+  `HudChip` is the small mono readout, deliberately quieter than the header.
+* **Motion** — entrances use `pop()` (spring physics); camera moves and reveals use `track()` (eased,
+  clamped `interpolate`); loops use sines of the frame number. `camera()` returns a slow push for the
+  whole scene. `ChapterFade` dips each chapter to black at its edges, so the hard cuts read as breaks.
+
 ### Scenes
 
-* **`DeskScene`** — Gradient room, four-pane window, seeded star field (46 stars, twinkling), a glowing
-  cratered Moon that swells and vanishes at `POP = 110`. Eight blurred puffs drift outward as smoke
-  over 70 frames, the stars fade, a black overlay ramps to 0.92 opacity, and the caption "RIGHT NOW"
-  scales in at frame ~240. The HUD badge flips from "LUNAR SIGNAL: STABLE" to "LOST"; the character
-  flinches from `idle/neutral` to `panicked/shocked`.
-* **`StaircaseScene`** — Whole-set pan of 50 px over 400 frames over an indigo gradient; a hallway
-  floor at y=450 with faint receding perspective lines and two wall guide lines meeting behind the
-  character; a cat made of divs (clip-path ears, glowing eyes, rotated tail) bobs on
-  `sin(frame * 0.08) * 12` above it; three dust specks; character at (580, 450) standing on the floor.
-* **`CitySkylineScene`** — Six flex-sized silhouette blocks; two rift bars grow from 0 % to
-  100 % / 80 % width across the sequence, the upper one jittering by `sin(frame * 0.2) * 8`; a
-  foreground rooftop (top edge y=960, two vents) gives the character at (480, 960) something to stand
-  on while it looks up.
-* **`ObservatoryScene`** — Radial control-room gradient; console row whose side panels alternate
-  between red and indigo every half cycle of `sin(frame * 0.3)`; central readout whose glow fades in
-  from 0.5 to 1; centered critical-error banner; the character (feet at y=900) is drawn *before* the
-  console row so the desk occludes its legs.
+* **`DeskScene`** — Dusk room with a four-pane window onto a violet horizon, hills and a lit city. A
+  cratered Moon swells and bursts at `POP = 110`: a ring and twelve gold puffs expand, the sky drains
+  via `<Sky dim>`, the lamp gutters, and the character springs from `idle/neutral` to
+  `panicked/shocked` (`actionStart={POP}`). The title lands at frame ≈236; the chip flips
+  `LUNAR SIGNAL: STABLE` → `LOST`. A floor lamp on the right is the room's warm key light.
+* **`StaircaseScene`** — A ten-step staircase climbing across a burning horizon, built from one
+  deterministic `STEPS` array; steps 4 and 7 have torn loose and drift on `sin(frame * 0.05)`. A
+  single sun disc drives the background (`sun={{ x: 1452, y: 704 }}`), with four floating rocks and a
+  vector cat (gold eyes, curved tail) hovering above the flight. The character rides step 1.
+* **`CitySkylineScene`** — The sun sits above the rooflines with rotating rays while three
+  `CityLine` bands drift at 14/32/56 px per scene for parallax. Two gold fractures are drawn as SVG
+  polylines revealed by `strokeDashoffset` and jittered by `sin(frame * 0.22) * 5`. The character
+  stands on the foreground rooftop (top edge y=910, sun bounce along the parapet, AC units and a mast
+  on the right).
+* **`ObservatoryScene`** — Domed room with a ribbed ceiling, a rounded dome slit (`<Sky>` + two
+  ridges) and a beacon whose soft light pool rotates about the lamp on the right. Three `Console`
+  panels animate their bars and status strips with frame-seeded sines; the centred readout counts up
+  to `SYNC LOSS 88.4%`. The character stands in the foreground in front of the left console, lit from
+  behind by it.
 
 ### `Character`
 
-A flat-vector figure drawn entirely from divs on a 120×240 base box, positioned by its **feet**
-(`x`, `y`), scaled by `scale`, and animated from the frame number:
+A single inline `<svg>` on a 160×320 base box — semi-chibi proportions, black hoodie with drawstrings
+and kangaroo pocket, slate cargo pants, chunky white sneakers, spiked black hair — positioned by its
+**feet** (`x`, `y`), scaled by `scale`, and animated from the frame number (breathing, a blink every
+72 frames, springed arm poses, panicked jitter):
 
 | Prop | Type | Default | Effect |
 | :--- | :--- | :--- | :--- |
 | `x`, `y` | `number` | required | Center/feet position in composition pixels. |
 | `scale` | `number` | `1` | Uniform scale about the feet. |
-| `action` | `'idle' \| 'panicked'` | `'idle'` | `panicked` raises both arms from the shoulders and adds a ±3 px jitter. |
-| `expression` | `'neutral' \| 'shocked' \| 'happy'` | `'neutral'` | `shocked` widens the eyes/brows and opens a red mouth. |
+| `action` | `'idle' \| 'panicked'` | `'idle'` | `panicked` springs both arms up from the shoulders and adds a ±2.5 px jitter. |
+| `expression` | `'neutral' \| 'shocked' \| 'happy'` | `'neutral'` | `shocked` gives wide white eyes, raised brows and an open mouth; `happy` a broad smile. |
+| `actionStart` | `number` | `0` | Frame at which the current pose began, so a mid-scene change springs instead of snapping. |
+| `flip` | `boolean` | `false` | Mirrors the figure horizontally. |
+| `shadow` | `boolean` | `true` | Draws the soft contact shadow under the feet. |
 
 ### Fonts
 
-`studio/src/fonts.ts` registers two bundled faces — `StudioSans` (DejaVu Sans) and `StudioMono`
-(DejaVu Sans Mono) — via `@remotion/fonts`' `loadFont`, which keeps the render blocked until they
-parse. Scenes reference these constants instead of `sans-serif`/`monospace`, because a bare container
-(or CI runner) has no system fonts and Chrome would silently render every HUD label blank. Keep new
-scenes on the same two families, or add another face to `public/fonts/` and register it there.
+`studio/src/fonts.ts` registers three bundled faces — `StudioSans` (DejaVu Sans), `StudioSansBold`
+(DejaVu Sans Bold, the real 700 weight) and `StudioMono` (DejaVu Sans Mono) — via `@remotion/fonts`'
+`loadFont`, which keeps the render blocked until they parse. Scenes and `Atmosphere.tsx` reference
+these constants instead of `sans-serif`/`monospace`, because a bare container (or CI runner) has no
+system fonts and Chrome would silently render every label blank. Keep new scenes on the same
+families, or add another face to `public/fonts/` and register it there.
 
 ### Conventions
 
@@ -159,10 +189,12 @@ scenes on the same two families, or add another face to `public/fonts/` and regi
   `useEffect`, timers, `Math.random()` or `Date.now()`. Random-looking data (e.g. the star field) is
   generated once at module load from a fixed seed.
 * One scene per file, named `<Name>Scene.tsx`, exporting a named `React.FC` that takes no props.
-* Palette: near-black `#090D16` / `#030712` / `#0F172A`, indigo `#1E1B4B` / `#1E293B`, slate
-  `#334155` / `#94A3B8`, cyan `#38BDF8`, amber `#FBBF24`, red `#EF4444`.
-* Each scene ends with a monospace HUD badge that states its "status" diegetically. Reuse that motif.
-* Styles are inline objects; there is no theme module or shared HUD component yet.
+* Take colour from `PALETTE` and timing from `theme.ts`; compose backgrounds from `Sky` / `Ridge` /
+  `CityLine` rather than re-deriving gradients, and announce each chapter with `Title` plus one
+  `HudChip`. Styles stay inline objects (Remotion-friendly), but nothing hard-codes a colour that
+  belongs in the palette.
+* Light comes from one warm source per scene (sun, lamp, console, beacon); keep gold for what the
+  viewer should look at and let shadows stay indigo.
 
 ---
 
@@ -209,7 +241,7 @@ before publishing either.
 | :--- | :--- | :--- |
 | Studio renders are silent | Storyboard specifies VO and SFX | Add `<Audio>` / `<Series>` with voice clips and an SFX bed, then re-render |
 | Studio cut (53 s) and committed video (18.7 s) diverged | Two different edits of the same episode | Re-cut the composition to the shorter edit, or adopt the 53 s cut and replace the video |
-| Scene art is sparse | Little mid-ground detail; scenes are flat colour blocks | Add set dressing and parallax layers |
+| Set dressing is still procedural | Roofs, rooms and hills are built from rectangles and sines; no drawn props or textures | Add a small asset layer (SVG props) for foreground detail |
 | `what-if-animation` submodule uninitialised | Workflow skill unavailable on a fresh clone | Add `.gitmodules`, or vendor the skill into `cartoons/.claude/skills/what-if-animation/` |
 | `generate.js` hard-codes prompt and model | One episode per source edit | Accept `--prompt`/`--out` args and a `MODEL` env var; write output to a file; exit non-zero on API errors |
 | Root and `cartoons/` lockfiles are empty | Misleading; implies npm projects that do not exist | Delete them, or scaffold the matching `package.json` files |
