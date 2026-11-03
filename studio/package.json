@@ -7,6 +7,8 @@
     "dev": "remotion studio",
     "render": "remotion render WhatIfMoon out/what-if-moon.mp4",
     "render:spec": "remotion render",
+    "render:external": "remotion render Spec-External out/external.mp4",
+    "validate": "node scripts/validate-render.mjs",
     "generate": "node ../generate_spec.js",
     "audio:sfx": "python3 scripts/sfx.py",
     "audio:vo": "python3 scripts/tts.py",

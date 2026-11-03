@@ -72,11 +72,22 @@ Rules that keep the voice from colliding with itself:
    cd studio && LD_LIBRARY_PATH=/tmp/chromelibs/usr/lib/x86_64-linux-gnu npx remotion still Spec-<slug> out/f-1000.png --frame=1000
    ```
    Pick frames at scene starts, mid-scene and the final beat.
-5. **Typecheck, then render.**
+5. **Typecheck, smoke-test, then render.**
    ```bash
-   cd studio && npm run typecheck
+   cd studio && npm run typecheck && npm run validate
    LD_LIBRARY_PATH=/tmp/chromelibs/usr/lib/x86_64-linux-gnu npx remotion render Spec-<slug> out/<slug>.mp4 --concurrency=2
    ```
+   `npm run validate` bundles the studio, evaluates every composition's props (including
+   `calculateMetadata`) and renders two stills each into `out/validate/`, so a missing `staticFile()`
+   asset or a bad spec fails in seconds. Pass a spec to include it:
+   `npm run validate -- ../animation_spec.json`.
+
+   **Or skip registration entirely** — `Spec-External` takes the spec as render props:
+   ```bash
+   cd studio && npx remotion render Spec-External out/episode.mp4 --props=../animation_spec.json
+   ```
+   Its `calculateMetadata` validates the file and throws with the validator's problem list before
+   frame 1. `./run_pipeline.sh --prompt "…"` does generate → check → render in one command.
    In this sandbox Chrome's shared libraries are installed outside the loader path, hence
    `LD_LIBRARY_PATH`; on a normal machine plain `npx remotion render` works. Two cores here — higher
    concurrency fails.
