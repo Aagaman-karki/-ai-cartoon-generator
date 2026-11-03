@@ -150,3 +150,6 @@ vite.config.ts.timestamp-*
 
 # Generated spec written by generate.js / run_pipeline.sh
 animation_spec.json
+
+# Local Chrome shared libs extracted for headless renders
+.chromelibs/
