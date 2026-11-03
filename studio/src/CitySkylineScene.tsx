@@ -125,20 +125,23 @@ export const CitySkylineScene: React.FC = () => {
         ))}
 
         {/* Foreground rooftop (top edge y=910 — the character's feet) */}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 170 }}>
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${PALETTE.shadowDeep} 0%, ${PALETTE.ink} 100%)` }} />
-          {/* Parapet lip, lit along its top edge by the sunset */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 18, background: `linear-gradient(180deg, ${PALETTE.shadow}, ${PALETTE.shadowDeep})` }} />
+        {/* Foreground rooftop: roof plane at y=944, parapet lip rising to y=898 */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 182 }}>
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${PALETTE.shadowDeep} 0%, ${PALETTE.ink} 70%, ${PALETTE.ink} 100%)` }} />
+          {/* Parapet wall in front of the figure */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 46, background: `linear-gradient(180deg, ${PALETTE.shadow} 0%, ${PALETTE.shadowDeep} 100%)` }} />
           <div
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
-              height: 6,
-              background: `linear-gradient(90deg, transparent, ${PALETTE.gold}AA 38%, ${PALETTE.ember}88 62%, transparent)`,
+              height: 7,
+              background: `linear-gradient(90deg, transparent, ${PALETTE.gold}CC 34%, ${PALETTE.ember}99 66%, transparent)`,
             }}
           />
+          <div style={{ position: 'absolute', top: 46, left: 0, right: 0, height: 3, background: PALETTE.ink, opacity: 0.85 }} />
+
           {/* Vents and an aerial mast */}
           <div style={{ position: 'absolute', bottom: 46, left: 1210, width: 150, height: 104, borderRadius: 8, background: PALETTE.ink, border: `2px solid ${PALETTE.violet}66` }} />
           <div style={{ position: 'absolute', bottom: 70, left: 1240, width: 90, height: 12, background: PALETTE.ink, border: `2px solid ${PALETTE.amber}44` }} />
@@ -147,31 +150,32 @@ export const CitySkylineScene: React.FC = () => {
           <div style={{ position: 'absolute', bottom: 210, left: 1584, width: 36, height: 4, background: PALETTE.ink }} />
           <div style={{ position: 'absolute', bottom: 224, left: 1597, width: 10, height: 10, borderRadius: '50%', background: PALETTE.ember, boxShadow: `0 0 18px ${PALETTE.ember}`, opacity: pulse }} />
 
-          {/* Warm bounce on the roof surface */}
+          {/* Warm bounce on the roof plane */}
           <div
             style={{
               position: 'absolute',
-              top: 18,
+              top: 46,
               left: 0,
               right: 0,
-              height: 120,
-              background: `linear-gradient(180deg, ${PALETTE.ember}1F 0%, transparent 100%)`,
+              height: 110,
+              background: `linear-gradient(180deg, ${PALETTE.ember}22 0%, transparent 100%)`,
             }}
           />
         </div>
 
-        {/* Character on the rooftop, lit from behind by the sun */}
+        {/* Character on the rooftop, drawn after the parapet so it stands on the lip */}
         <div
           style={{
             position: 'absolute',
             left: 300,
-            top: 500,
+            top: 470,
             width: 620,
-            height: 440,
+            height: 460,
             background: `radial-gradient(ellipse 50% 50% at 62% 72%, ${PALETTE.amber}38 0%, transparent 100%)`,
           }}
         />
-        <Character x={500} y={910} scale={1.24} action='panicked' actionStart={2} expression='shocked' />
+        <Character x={500} y={898} scale={1.28} action='panicked' actionStart={2} expression='shocked' />
+
 
         <Particles count={30} seed={41} opacity={0.55} />
       </AbsoluteFill>
