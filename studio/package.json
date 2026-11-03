@@ -1,0 +1,24 @@
+{
+  "name": "studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion scenes for the \"What If…?\" cartoon episodes",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render WhatIfMoon out/what-if-moon.mp4",
+    "still": "remotion still WhatIfMoon out/still.png",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.540",
+    "@remotion/fonts": "^4.0.540",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.540"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "typescript": "5.7.3"
+  }
+}

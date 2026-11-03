@@ -1,7 +1,16 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
 import { Character } from './Character';
+import { MONO, SANS } from './fonts';
 
+/**
+ * Storyboard beat 2 — "Ocean chaos" reinterpreted as a hallway under an unstable gravity field.
+ *
+ * Visuals: a slow upward camera pan over an indigo gradient, a procedurally drawn cat floating on a
+ * sine wave, and a panicked character at (580, 450). Timing assumes a 400-frame sequence.
+ *
+ * Uses ./Character for the figure, and ./fonts for the HUD face.
+ */
 export const StaircaseScene: React.FC = () => {
   const frame = useCurrentFrame();
 
@@ -9,7 +18,7 @@ export const StaircaseScene: React.FC = () => {
   const catFloat = Math.sin(frame * 0.08) * 12;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#090D16', overflow: 'hidden', fontFamily: 'sans-serif' }}>
+    <AbsoluteFill style={{ backgroundColor: '#090D16', overflow: 'hidden', fontFamily: SANS }}>
       <div style={{ position: 'absolute', width: '100%', height: '100%', transform: `translateY(${panY}px)` }}>
         <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'linear-gradient(180deg, #1E1B4B 0%, #0F172A 100%)' }} />
 
@@ -29,7 +38,7 @@ export const StaircaseScene: React.FC = () => {
       </div>
 
       <div style={{ position: 'absolute', top: 40, left: 70, backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: '12px 24px', borderRadius: 12, border: '2px solid #EF4444' }}>
-        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#EF4444', fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#EF4444', fontFamily: MONO }}>
           ANOMALY SECTOR: HALLWAY
         </div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2, letterSpacing: 1 }}>

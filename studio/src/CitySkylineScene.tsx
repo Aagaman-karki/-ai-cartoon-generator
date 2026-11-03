@@ -1,7 +1,16 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
 import { Character } from './Character';
+import { MONO, SANS } from './fonts';
 
+/**
+ * Storyboard beat 3 — "The Earth wobble", shown as a city skyline under a fracturing sky.
+ *
+ * Visuals: silhouette skyline, two glowing "temporal rift" bars that widen across the 400-frame
+ * sequence (the upper one jitters for a glitch feel), and a character looking up in shock.
+ *
+ * Uses ./Character for the figure, and ./fonts for the HUD face.
+ */
 export const CitySkylineScene: React.FC = () => {
   const frame = useCurrentFrame();
 
@@ -9,7 +18,7 @@ export const CitySkylineScene: React.FC = () => {
   const fractureWidth = interpolate(frame, [0, 400], [0, 100], { extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#090D16', overflow: 'hidden', fontFamily: 'sans-serif' }}>
+    <AbsoluteFill style={{ backgroundColor: '#090D16', overflow: 'hidden', fontFamily: SANS }}>
       {/* City background gradient */}
       <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'linear-gradient(180deg, #0F172A 0%, #1E1B4B 50%, #312E81 100%)' }} />
 
@@ -32,7 +41,7 @@ export const CitySkylineScene: React.FC = () => {
 
       {/* Cinematic Banner */}
       <div style={{ position: 'absolute', top: 40, right: 70, backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: '12px 24px', borderRadius: 12, border: '2px solid #38BDF8' }}>
-        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#38BDF8', fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#38BDF8', fontFamily: MONO }}>
           GLOBAL HORIZON: FRACTURED
         </div>
         <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2, letterSpacing: 1 }}>
