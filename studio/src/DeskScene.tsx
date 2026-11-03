@@ -186,19 +186,17 @@ export const DeskScene: React.FC = () => {
             opacity: 0.55 + lampFlicker * 0.45,
           }}
         />
-        <div
-          style={{
-            position: 'absolute',
-            left: 1600,
-            top: 396,
-            width: 200,
-            height: 470,
-            background: `linear-gradient(180deg, ${PALETTE.gold}3D 0%, ${PALETTE.gold}00 100%)`,
-            clipPath: 'polygon(34% 0%, 66% 0%, 100% 100%, 0% 100%)',
-            opacity: lampFlicker * 0.75,
-            filter: 'blur(16px)',
-          }}
-        />
+        {/* Blur lives on the wrapper: blurring a clipped child leaves the clip edge sharp */}
+        <div style={{ position: 'absolute', left: 1600, top: 396, width: 200, height: 470, filter: 'blur(18px)', opacity: lampFlicker * 0.7 }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(180deg, ${PALETTE.gold}33 0%, ${PALETTE.gold}00 100%)`,
+              clipPath: 'polygon(34% 0%, 66% 0%, 100% 100%, 0% 100%)',
+            }}
+          />
+        </div>
 
         {/* Character, standing behind the desk, flinching when the Moon goes */}
         <Character
