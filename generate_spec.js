@@ -9,6 +9,10 @@
  * Usage:
  *   node generate_spec.js --prompt "What if the moon vanished?" --out studio/src/specs/what-if-moon.json
  *   node generate_spec.js --prompt "..." --dry-run        # print the request, send nothing
+ *   node generate_spec.js --prompt "..." --frames 3600 --scenes 6-8   # shorter cut
+ *
+ * Defaults: 14,400 frames (8:00 at 30fps) across 12-16 scenes, with narration and SFX cues spread
+ * over the whole timeline.
  *
  * Requires Node 18+ (global fetch) and GOOGLE_GENERATIVE_API_KEY for a real call.
  *
@@ -21,9 +25,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DEFAULT_MODEL = 'gemini-3.8-flash';
+const DEFAULT_TARGET_FRAMES = 14400;
+const DEFAULT_SCENE_RANGE = [12, 16];
 
 /** Compact description of the spec contract, kept in sync with studio/src/spec/types.ts. */
-const SCHEMA_BRIEF = `Return ONLY a JSON object with this shape:
+const schemaBrief = (targetFrames) => `Return ONLY a JSON object with this shape:
 {
   "title": string,
   "slug": string,                      // lowercase-kebab-case, unique
@@ -34,8 +40,9 @@ const SCHEMA_BRIEF = `Return ONLY a JSON object with this shape:
     "accentColor": "#RRGGBB",
     "fontFamily": "StudioSansBold"     // must be StudioSans | StudioSansBold | StudioMono
   },
+  "totalDurationFrames": ${targetFrames},   // must equal the sum of scene durations
   "showNarration": false,
-  "narration": [ { "frameStart": number, "text": string } ],
+  "narration": [ { "frameStart": number, "text": string } ],   // frameStart is ABSOLUTE, not scene-local
   "scenes": [
     {
       "id": "scene_1",
@@ -48,7 +55,7 @@ const SCHEMA_BRIEF = `Return ONLY a JSON object with this shape:
       },
       "camera": "static" | "slow_zoom_in" | "slow_zoom_out" | "pan_up" | "pan_down",
       "elements": [ ...see below ],
-      "sfx": [string]
+      "sfx": ["clock_tick", "pop"]     // cues that fire at this scene's absolute start frame
     }
   ]
 }
@@ -62,29 +69,92 @@ Element types (coordinates are composition pixels on a 1920x1080 frame):
 - { "type": "particles", "count"?, "seed"?, "opacity"? }
 - { "type": "glow", "x", "y", "width", "height", "color"?, "intensity"? }`;
 
-const DIRECTING_RULES = `Directing rules (a vertical explainer with high retention):
-1. Total length 1,200-1,800 frames at 30fps (40-60s), split into 3-5 scenes.
-2. Hook first: the first scene must contain a high-contrast pattern break inside frame 0-90 — a bold
+/** Rules are generated so the numbers in them always agree with the requested length. */
+const directingRules = (targetFrames, [minScenes, maxScenes]) => {
+  const clock = (frames) => {
+    const total = Math.round(frames / 30);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  };
+  const at = (frames) => `${frames.toLocaleString('en-US')} frames (${clock(frames)})`;
+  const avgScene = Math.round(targetFrames / ((minScenes + maxScenes) / 2));
+  // A cue roughly every 15s keeps the voice present without stepping on itself.
+  const cueGap = 450;
+  return `Directing rules (a long-form explainer with high retention):
+1. Total length ${at(targetFrames)} at 30fps, split into ${minScenes}-${maxScenes} scenes. A scene is
+   ${at(Math.round(targetFrames / maxScenes))} to ${at(targetFrames / minScenes)}; aim for about
+   ${at(avgScene)} each. durationFrames must sum to EXACTLY ${targetFrames.toLocaleString('en-US')} and totalDurationFrames
+   must repeat that number. A 4-scene, 60-second short is a failed response: this is an 8-minute episode.
+2. Structure the whole ${clock(targetFrames)}, not just the opening: establish the premise, then escalate through consequences,
+   complications and a turn, and land on a final image that answers the title. Reserve the last scene
+   for the resolution — no cliffhanger padding.
+3. Hook first: the first scene must contain a high-contrast pattern break inside frame 0-90 — a bold
    "hero" text_overlay that lands by frame 30, or a character beat that starts by frame 20.
-3. Keep the frame readable: one hero text per scene, one hud_chip at most, and never place text over
+4. Keep the frame readable: one hero text per scene, one hud_chip at most, and never place text over
    the character (characters live in the left third or right third; text in the opposite third).
-4. Give every scene a camera move, and alternate them (e.g. slow_zoom_in, pan_up, slow_zoom_out).
-5. Warm cinematic twilight palette: primary is a gold/orange highlight, secondary a deep indigo or
+5. Give every scene a camera move, and alternate them (e.g. slow_zoom_in, pan_up, slow_zoom_out).
+6. Warm cinematic twilight palette: primary is a gold/orange highlight, secondary a deep indigo or
    navy shadow. Never put a warm primary on a warm secondary.
-6. Narration: one sentence per scene, frameStart at or just after that scene's first frame, written
-   for the ear (short, concrete, no stage directions).
-7. Convention for y coordinates: skyline rooftops ~898, hills ~900-1000, interiors ~906-1072.`;
+7. Narration must cover the FULL timeline. Compute each scene's absolute start frame by summing the
+   durationFrames of every scene before it; then emit one cue per scene at that start + 12 frames,
+   plus an extra cue every ~${cueGap} frames (15s) inside long scenes. This ${clock(targetFrames)} episode needs roughly
+   ${Math.round(targetFrames / cueGap)}-${Math.round(targetFrames / cueGap) + 8} cues. frameStart is ABSOLUTE and must be strictly
+   increasing, the first cue must be under frame 200 and the last must fall inside the final 30
+   seconds. Budget the words: about 2.5 words per second of the gap before the next cue, so a cue
+   never talks over the next one. Write for the ear: short, concrete, no stage directions.
+8. SFX: name the sounds that carry each scene's beat in that scene's "sfx" array — they fire at the
+   scene's absolute start. Use a cue from this vocabulary so the audio stage can match it:
+   ${['ambience', 'clock_tick', 'pop', 'sub_drop', 'riser', 'glass_crack', 'rumble', 'alarm', 'whoosh', 'heartbeat'].join(', ')}.
+   Most scenes get 0-2 cues, and no cue repeats in three consecutive scenes. Map the vocabulary to the
+   story: clock_tick for time beats, pop for a sudden disappearance, sub_drop for weightless release,
+   glass_crack for a sky fracture, alarm for a warning — the same beat the visuals are selling.
+9. Convention for y coordinates: skyline rooftops ~898, hills ~900-1000, interiors ~906-1072.`;
+};
+
+const USAGE =
+  'Usage: node generate_spec.js --prompt "concept" [--out path.json] [--frames 14400] [--scenes 12-16]' +
+  ' [--dry-run] [--model id]';
+
+/** `12-16`, `12..16` or a single `14` all mean the same thing. */
+const parseSceneRange = (text) => {
+  const match = /^(\d+)(?:\s*(?:-|\.\.)\s*(\d+))?$/.exec(text.trim());
+  if (!match) return null;
+  const min = Number(match[1]);
+  const max = match[2] === undefined ? Number(match[1]) : Number(match[2]);
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) return null;
+  return [min, max];
+};
 
 const parseArgs = (argv) => {
-  const args = { prompt: '', out: '', model: DEFAULT_MODEL, dryRun: false };
+  const args = {
+    prompt: '',
+    out: '',
+    model: DEFAULT_MODEL,
+    targetFrames: DEFAULT_TARGET_FRAMES,
+    sceneRange: DEFAULT_SCENE_RANGE,
+    dryRun: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === '--prompt') args.prompt = argv[++index] ?? '';
     else if (token === '--out') args.out = argv[++index] ?? '';
     else if (token === '--model') args.model = argv[++index] ?? DEFAULT_MODEL;
-    else if (token === '--dry-run') args.dryRun = true;
+    else if (token === '--frames') {
+      const frames = Number(argv[++index]);
+      if (!Number.isInteger(frames) || frames < 30) {
+        console.error('--frames must be a whole number of frames (at least 30).');
+        process.exit(1);
+      }
+      args.targetFrames = frames;
+    } else if (token === '--scenes') {
+      const range = parseSceneRange(argv[++index] ?? '');
+      if (!range) {
+        console.error('--scenes must look like 12-16 (or a single count, e.g. 14).');
+        process.exit(1);
+      }
+      args.sceneRange = range;
+    } else if (token === '--dry-run') args.dryRun = true;
     else if (token === '--help' || token === '-h') {
-      console.log('Usage: node generate_spec.js --prompt "concept" [--out path.json] [--dry-run] [--model id]');
+      console.log(USAGE);
       process.exit(0);
     }
   }
@@ -99,6 +169,7 @@ const slugify = (text) =>
     .slice(0, 48) || 'episode';
 
 const BACKGROUNDS = ['dusk_room', 'twilight_skyline', 'floating_staircase', 'dome_interior', 'open_horizon'];
+const SFX_CUES = ['ambience', 'clock_tick', 'pop', 'sub_drop', 'riser', 'glass_crack', 'rumble', 'alarm', 'whoosh', 'heartbeat'];
 const ELEMENT_TYPES = ['character', 'text_overlay', 'hud_chip', 'fracture', 'particles', 'glow'];
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -135,6 +206,59 @@ const checkSpec = (spec) => {
   return errors;
 };
 
+/**
+ * Length and cue-coverage check. These are the failures the schema cannot see: a structurally valid
+ * spec that quietly renders 40 seconds instead of 8 minutes, or an eight-minute timeline whose
+ * narration stops after the first minute. Warnings, not errors — a short cut may be intentional.
+ */
+const checkTiming = (spec, totalFrames, { targetFrames, sceneRange: [minScenes, maxScenes] }) => {
+  const warnings = [];
+  const sceneCount = spec.scenes.length;
+  const narration = spec.narration;
+  const seconds = (frames) => `${(frames / 30).toFixed(1)}s`;
+  const count = (frames) => frames.toLocaleString('en-US');
+
+  if (sceneCount < minScenes || sceneCount > maxScenes)
+    warnings.push(`expected ${minScenes}-${maxScenes} scenes, got ${sceneCount}`);
+
+  const drift = Math.abs(totalFrames - targetFrames) / targetFrames;
+  if (drift > 0.05)
+    warnings.push(
+      `timeline is ${count(totalFrames)} frames (${seconds(totalFrames)}), target is ${count(targetFrames)} frames (${seconds(targetFrames)}) — ` +
+        `${drift > 0.5 ? 'less than half the requested length' : `${(drift * 100).toFixed(0)}% off`}`,
+    );
+
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  if (narration.length < sceneCount)
+    warnings.push(`only ${plural(narration.length, 'narration cue')} for ${sceneCount} scenes — aim for one per scene`);
+
+  const expectedCues = Math.round(targetFrames / 450);
+  if (narration.length < expectedCues * 0.75)
+    warnings.push(
+      `narration covers ${plural(narration.length, 'cue')}; ${count(targetFrames)} frames wants about ${expectedCues} so the voice runs the whole episode`,
+    );
+
+  const lastFrame = totalFrames - 1;
+  const starts = narration.map((cue) => cue.frameStart);
+  if (starts.some((start, index) => index > 0 && start < starts[index - 1]))
+    warnings.push('narration frameStart values are not in increasing order');
+  if (starts.some((start) => start > lastFrame))
+    warnings.push(`a narration cue starts after the last frame (${lastFrame})`);
+  if (starts.length > 0 && Math.min(...starts) > 200)
+    warnings.push(`first narration cue is at frame ${Math.min(...starts)}; the hook should be scored by frame 200`);
+  if (starts.length > 0 && lastFrame - Math.max(...starts) > 900)
+    warnings.push(
+      `last narration cue is at frame ${Math.max(...starts)} — the final ${seconds(lastFrame - Math.max(...starts))} would be silent`,
+    );
+
+  const sfx = spec.scenes.flatMap((scene) => (Array.isArray(scene.sfx) ? scene.sfx : []));
+  if (sfx.length === 0) warnings.push('no sfx cues anywhere in the spec');
+  const unknown = [...new Set(sfx.filter((cue) => !SFX_CUES.includes(cue)))];
+  if (unknown.length > 0) warnings.push(`sfx cues outside the vocabulary: ${unknown.join(', ')}`);
+
+  return warnings;
+};
+
 /** Model output sometimes arrives fenced or with prose around the JSON. */
 const extractJson = (text) => {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -149,9 +273,9 @@ const extractJson = (text) => {
   }
 };
 
-const buildRequest = (prompt) => ({
+const buildRequest = (prompt, targetFrames, sceneRange) => ({
   systemInstruction: {
-    parts: [{ text: `You are a motion-graphics director writing a machine-renderable animation spec.\n\n${SCHEMA_BRIEF}\n\n${DIRECTING_RULES}` }],
+    parts: [{ text: `You are a motion-graphics director writing a machine-renderable animation spec.\n\n${schemaBrief(targetFrames)}\n\n${directingRules(targetFrames, sceneRange)}` }],
   },
   contents: [{ role: 'user', parts: [{ text: `/no_think\nConcept: ${prompt}` }] }],
   generationConfig: { temperature: 0.9, responseMimeType: 'application/json' },
@@ -166,10 +290,11 @@ async function main() {
 
   const slug = slugify(args.prompt);
   const out = args.out || path.join('studio', 'src', 'specs', `${slug}.json`);
-  const request = buildRequest(args.prompt);
+  const target = { targetFrames: args.targetFrames, sceneRange: args.sceneRange };
+  const request = buildRequest(args.prompt, args.targetFrames, args.sceneRange);
 
   if (args.dryRun) {
-    console.log(JSON.stringify({ url: `https://generativelanguage.googleapis.com/v1beta/models/${args.model}:generateContent`, out, request }, null, 2));
+    console.log(JSON.stringify({ url: `https://generativelanguage.googleapis.com/v1beta/models/${args.model}:generateContent`, out, target, request }, null, 2));
     return;
   }
 
@@ -214,13 +339,27 @@ async function main() {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, `${JSON.stringify(spec, null, 2)}\n`);
   const totalFrames = spec.scenes.reduce((sum, scene) => sum + scene.durationFrames, 0);
+  const sfxCount = spec.scenes.reduce((sum, scene) => sum + (Array.isArray(scene.sfx) ? scene.sfx.length : 0), 0);
 
   console.log(`Wrote ${out}`);
-  console.log(`  "${spec.title}" — ${spec.scenes.length} scenes, ${totalFrames} frames (${(totalFrames / (spec.fps ?? 30)).toFixed(1)}s)`);
+  console.log(
+    `  "${spec.title}" — ${spec.scenes.length} scenes, ${totalFrames} frames (${(totalFrames / (spec.fps ?? 30)).toFixed(1)}s), ` +
+      `${spec.narration.length} narration cues, ${sfxCount} sfx cues`,
+  );
+  const warnings = checkTiming(spec, totalFrames, target);
+  if (warnings.length > 0) {
+    console.warn(`\nTiming warnings (target: ${args.targetFrames} frames in ${args.sceneRange.join('-')} scenes):`);
+    warnings.forEach((warning) => console.warn(`  ! ${warning}`));
+    console.warn('  Fix these in the JSON or re-run with a stronger prompt before rendering.');
+  }
   console.log(`Next: import it in studio/src/specs/index.ts, then render "Spec-${spec.slug}".`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = { checkSpec, checkTiming, parseSceneRange, slugify };
