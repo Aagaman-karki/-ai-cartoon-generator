@@ -1,0 +1,24 @@
+{
+  "name": "ai-cartoon-generator",
+  "version": "1.0.0",
+  "description": "AI-powered cartoon script and animated video generator using Google Gemini and Remotion",
+  "main": "generate.js",
+  "type": "commonjs",
+  "scripts": {
+    "generate": "node generate.js",
+    "studio:start": "npm --prefix studio run start",
+    "studio:build": "npm --prefix studio run build",
+    "studio:render": "npm --prefix studio run render",
+    "test": "node test/generate.test.js && npm --prefix studio run typecheck"
+  },
+  "keywords": [
+    "ai",
+    "animation",
+    "cartoon",
+    "gemini",
+    "remotion",
+    "video"
+  ],
+  "author": "Aagaman-karki",
+  "license": "MIT"
+}
