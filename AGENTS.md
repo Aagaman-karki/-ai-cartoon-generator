@@ -13,6 +13,7 @@ Build the docs and the pipeline around those facts.
 | 1. Schema | `studio/src/spec/types.ts`, `studio/src/spec/validate.ts` | The contract: `AnimationSpec`, and a validator that turns untrusted model output into a typed spec plus derived timing. |
 | 2. Factory | `studio/src/spec/UniversalScene.tsx`, `studio/src/spec/backgrounds.tsx`, `studio/src/Atmosphere.tsx`, `studio/src/Character.tsx` | Declarative elements and environments → React. `BACKGROUNDS` is the environment registry; `ElementView` is the element registry. |
 | 2b. Timeline | `studio/src/spec/SpecMovie.tsx`, `studio/src/ChapterFade.tsx` | One `<Sequence>` per scene, chapter dips, optional burned-in narration. |
+| 2c. Audio | `studio/src/EpisodeAudio.tsx`, `studio/scripts/tts.py`, `studio/scripts/sfx.py` | Voiceover (Kokoro neural TTS) and a synthesised SFX bed, placed on the timeline by frame. |
 | 3. Automation | `generate_spec.js` | Prompt → Gemini → validated spec JSON written to `studio/src/specs/`. |
 | 4. Rendering | `studio/src/Root.tsx`, `studio/src/specs/index.ts` | Every spec becomes a `Spec-<slug>` composition, timed from `timingFor(spec)`. |
 
@@ -62,6 +63,25 @@ Adding a background is two files: `studio/src/spec/backgrounds.tsx` (component +
 and `BackgroundType` in `types.ts`, plus the enum in `generate_spec.js` (`BACKGROUNDS`). Prefer building
 new environments from `Sky`, `Ridge`, `CityLine`, `Particles` and `Vignette` rather than new gradients.
 
+## Audio
+
+Sound is generated, not sampled, and committed as WAVs in `studio/public/audio/` — a render needs no
+Python at all. Two scripts produce it:
+
+* `studio/scripts/tts.py` — Kokoro (Apache-2.0, ONNX Runtime, no PyTorch) reads
+  `studio/scripts/narration.json` and writes `ch{1..4}-vo.wav`. Setup is in the script's docstring; the
+  model lives outside the repo (`/tmp/kokoro`, ~360 MB).
+* `studio/scripts/sfx.py` — numpy synthesis of `ambience.wav` and four event stings. Fixed RNG seed, so
+  the same command always produces the same audio.
+
+`EpisodeAudio` is rendered by `MainSequence` above the chapter Sequences. Levels, offsets and ducking
+are plain numbers in that file — edit them there rather than mixing in post, so the mix stays
+reproducible from source. Event frame numbers are duplicated in `sfx.py`'s docstring by design.
+
+If you add narration for a new episode, extend `narration.json` (id, frame marker, line), re-run
+`tts.py`, and add a matching entry — with the clip's length rounded to frames — to `VOICEOVER` so the
+bed ducks under it.
+
 ## Invariants
 
 * `durationInFrames` is always the sum of scene durations (`timingFor`). `totalDurationFrames` in a spec
@@ -75,9 +95,12 @@ new environments from `Sky`, `Ridge`, `CityLine`, `Particles` and `Vignette` rat
 
 ## Known limitations
 
-* **No audio yet.** `narration[]` and per-scene `sfx[]` are data only. Nothing synthesises voice or
-  sound, and renders are silent. A TTS stage (e.g. Kokoro) would write `.wav` files and register a
-  `<Audio>` track in `SpecMovie`; that is not implemented.
+* **Spec episodes are silent.** `Spec-*` compositions ignore `narration[]` and `sfx[]`; the soundtrack
+  exists only for the hand-authored `WhatIfMoon` cut, wired by hand in `EpisodeAudio`. Generalising it
+  to specs means generating one clip per narration cue and placing it by `frameStart`.
+* **Audio is verified by measurement, not by ear.** Renders were checked with `ffprobe` (stream present,
+  duration matches) and the voiceover was transcribed back to text to confirm intelligibility. Nobody
+  has listened for timbre or mix balance.
 * The factory has six element types and five environments. It cannot express arbitrary art; anything
   outside the vocabulary needs a new element or background.
 * `Spec-*` compositions are approximations of the hand-authored cut, not pixel matches.

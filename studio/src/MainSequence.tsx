@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sequence } from 'remotion';
 import { ChapterFade } from './ChapterFade';
+import { EpisodeAudio } from './EpisodeAudio';
 import { DeskScene } from './DeskScene';
 import { StaircaseScene } from './StaircaseScene';
 import { CitySkylineScene } from './CitySkylineScene';
@@ -16,6 +17,9 @@ import { ObservatoryScene } from './ObservatoryScene';
  *
  * `ChapterFade` dips each chapter in from black and back out again, so the hard Sequence cuts read as
  * deliberate chapter breaks rather than jump cuts.
+ *
+ * `EpisodeAudio` sits above the chapter Sequences and runs the whole length: the ambience bed, the four
+ * voiceovers and the event stings, all locked to the frame numbers used by the scenes.
  */
 
 const CHAPTER = 400;
@@ -23,6 +27,7 @@ const CHAPTER = 400;
 export const MainSequence: React.FC = () => {
   return (
     <>
+      <EpisodeAudio />
       <Sequence from={0} durationInFrames={CHAPTER}>
         <ChapterFade durationInFrames={CHAPTER}>
           <DeskScene />

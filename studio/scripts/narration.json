@@ -1,0 +1,27 @@
+{
+  "episode": "what-if-moon",
+  "voice": "af_heart",
+  "speed": 0.98,
+  "chapters": [
+    {
+      "id": "ch1",
+      "frame": 0,
+      "voiceover": "What if the Moon vanished, right now? One second it's there. The next, the whole night sky is just empty."
+    },
+    {
+      "id": "ch2",
+      "frame": 400,
+      "voiceover": "With nothing left to pull on it, gravity lets go. Stairs, cups, whole cities — everything starts to drift."
+    },
+    {
+      "id": "ch3",
+      "frame": 800,
+      "voiceover": "Then the sky itself cracks. Above the city, the horizon simply gives way."
+    },
+    {
+      "id": "ch4",
+      "frame": 1200,
+      "voiceover": "Timeline integrity: forty two percent. The clocks disagree, the signals desynchronise, and we are still inside it."
+    }
+  ]
+}
