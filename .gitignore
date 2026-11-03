@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Generated spec written by generate.js / run_pipeline.sh
+animation_spec.json

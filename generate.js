@@ -25,7 +25,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const API_HOST = 'https://generativelanguage.googleapis.com';
+/** Both versions serve `generateContent`; v1beta is where new models land first. */
+const API_VERSIONS = new Set(['v1beta', 'v1']);
+const apiRoot = (version) => `${API_HOST}/${version}`;
 
 /**
  * Model IDs valid as of late 2026 (ai.google.dev/gemini-api/docs/models). Tried in order: a 404
@@ -47,8 +50,12 @@ const MAX_ATTEMPTS = 5;
 const USAGE = `Usage: node generate.js [options]
 
   --prompt <text>      prompt to send (default: the built-in What If prompt)
-  --out <path>         where to write the JSON (default: animation_spec.json)
-  --model <id>         model to use (default: ${MODELS[0]}, then ${MODELS.slice(1).join(', ')} on 404)
+  --out <path>         where to write the JSON (default: animation_spec.json in the repo root).
+                       Relative paths resolve against the repo root, not the current directory,
+                       so running this from studio/ still writes the same file.
+  --model <id>         model to use (default: ${MODELS[0]}, then ${MODELS.slice(1).join(', ')} on 404).
+                       Accepts models/x, /v1beta/models/x or a full URL; the path is stripped.
+  --api-version <v>    API version to call: v1beta (default) or v1
   --list-models        list models this key can call, then exit
   --timeout <seconds>  per-attempt timeout (default: 240)
   --dry-run            print the request without sending it
@@ -56,13 +63,39 @@ const USAGE = `Usage: node generate.js [options]
 
 Key: GEMINI_API_KEY, GOOGLE_GENERATIVE_API_KEY or GOOGLE_API_KEY.`;
 
+/**
+ * Model ids reach here pasted from docs, dashboards and error messages as `models/x`, `v1beta/models/x`
+ * or a whole URL. Left alone they build a doubled path (`v1beta/models/x:generateContent` on top of
+ * `v1beta/models/`), which Google reports as a plain 404 "model not found" — the confusing failure
+ * this script exists to prevent. Strip it down to the bare id.
+ */
+const normalizeModel = (value) => {
+  const model = String(value ?? '')
+    .trim()
+    .replace(/^https?:\/\/[^/]+\//i, '')
+    .replace(/^\/+/, '')
+    .replace(/^v1(?:beta|alpha)?\d*\//i, '')
+    .replace(/^models\//i, '')
+    .replace(/:generateContent$/i, '');
+  if (!model) fail('--model cannot be empty.');
+  if (model.includes('/') || /\s/.test(model)) {
+    fail(`--model expects a bare model id such as "${MODELS[0]}", not "${value}".`);
+  }
+  return model;
+};
+
 const parseArgs = (argv) => {
-  const args = { prompt: DEFAULT_PROMPT, out: 'animation_spec.json', model: '', timeoutMs: DEFAULT_TIMEOUT_MS, listModels: false, dryRun: false };
+  const args = { prompt: DEFAULT_PROMPT, out: 'animation_spec.json', model: '', apiVersion: 'v1beta', timeoutMs: DEFAULT_TIMEOUT_MS, listModels: false, dryRun: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === '--prompt') args.prompt = argv[++index] ?? '';
     else if (token === '--out') args.out = argv[++index] ?? '';
-    else if (token === '--model') args.model = argv[++index] ?? '';
+    else if (token === '--model') args.model = normalizeModel(argv[++index] ?? '');
+    else if (token === '--api-version') {
+      const version = String(argv[++index] ?? '').trim();
+      if (!API_VERSIONS.has(version)) fail(`--api-version must be one of: ${[...API_VERSIONS].join(', ')}.`);
+      args.apiVersion = version;
+    }
     else if (token === '--list-models') args.listModels = true;
     else if (token === '--dry-run') args.dryRun = true;
     else if (token === '--timeout') {
@@ -172,8 +205,8 @@ async function postOnce({ url, apiKey, body, timeoutMs }) {
  * Retry wrapper for one model. Returns the parsed response, or throws an Error carrying `status`
  * so the caller can decide whether another model is worth trying.
  */
-async function callModel({ model, apiKey, body, timeoutMs, maxAttempts = MAX_ATTEMPTS }) {
-  const url = `${API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
+async function callModel({ model, apiKey, body, timeoutMs, apiVersion = 'v1beta', maxAttempts = MAX_ATTEMPTS }) {
+  const url = `${apiRoot(apiVersion)}/models/${encodeURIComponent(normalizeModel(model))}:generateContent`;
   let lastError;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -238,8 +271,8 @@ const collectText = (data) => {
   return parts.map((part) => part.text ?? '').join('').trim();
 };
 
-async function listModels(apiKey) {
-  const url = `${API_BASE}/models?pageSize=1000`;
+async function listModels(apiKey, apiVersion = 'v1beta') {
+  const url = `${apiRoot(apiVersion)}/models?pageSize=1000`;
   const response = await fetch(url, { headers: { 'x-goog-api-key': apiKey } });
   const rawBody = await response.text();
   if (!response.ok) return fail(`Could not list models (HTTP ${response.status}):\n  ${hintFor(response.status, rawBody)}`);
@@ -259,7 +292,7 @@ async function main() {
 
   if (args.listModels) {
     if (!apiKey) fail('No API key found. Set GEMINI_API_KEY (or GOOGLE_GENERATIVE_API_KEY / GOOGLE_API_KEY).');
-    return listModels(apiKey);
+    return listModels(apiKey, args.apiVersion);
   }
 
   const candidates = args.model ? [args.model] : MODELS;
@@ -268,7 +301,12 @@ async function main() {
   if (args.dryRun) {
     console.log(
       JSON.stringify(
-        { wouldCall: candidates.map((model) => `${API_BASE}/models/${model}:generateContent`), auth: 'x-goog-api-key: <redacted>', out: args.out, body },
+        {
+          wouldCall: candidates.map((model) => `${apiRoot(args.apiVersion)}/models/${model}:generateContent`),
+          auth: 'x-goog-api-key: <redacted>',
+          out: path.resolve(__dirname, args.out),
+          body,
+        },
         null,
         2,
       ),
@@ -283,7 +321,7 @@ async function main() {
   let lastError;
   for (const model of candidates) {
     try {
-      result = await callModel({ model, apiKey, body, timeoutMs: args.timeoutMs });
+      result = await callModel({ model, apiKey, body, timeoutMs: args.timeoutMs, apiVersion: args.apiVersion });
       break;
     } catch (error) {
       lastError = error;
@@ -308,7 +346,9 @@ async function main() {
   }
 
   const spec = extractJson(text);
-  const outPath = path.resolve(process.cwd(), args.out);
+  // Relative to this script (the repo root), so the file a studio or pipeline step expects is written
+  // no matter which directory the command was run from.
+  const outPath = path.resolve(__dirname, args.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
   if (!spec) {

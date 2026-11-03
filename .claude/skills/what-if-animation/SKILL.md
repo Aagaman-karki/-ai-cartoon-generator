@@ -82,10 +82,14 @@ Rules that keep the voice from colliding with itself:
    asset or a bad spec fails in seconds. Pass a spec to include it:
    `npm run validate -- ../animation_spec.json`.
 
-   **Or skip registration entirely** — `Spec-External` takes the spec as render props:
+   **Or skip registration entirely** — `Spec-External` takes the spec as render props. `npm run render`
+   already points it at the repo-root `animation_spec.json` and writes `out/<slug>.mp4`:
    ```bash
-   cd studio && npx remotion render Spec-External out/episode.mp4 --props=../animation_spec.json
+   cd studio && npm run render                    # ../animation_spec.json
+   cd studio && npm run render -- ../other.json   # any spec file
    ```
+   It resolves the path from the repo root, so it does not matter which directory you run it from, and
+   it falls back to the reference cut only when the default `animation_spec.json` is absent.
    Its `calculateMetadata` validates the file and throws with the validator's problem list before
    frame 1. `./run_pipeline.sh --prompt "…"` does generate → check → render in one command.
    In this sandbox Chrome's shared libraries are installed outside the loader path, hence
