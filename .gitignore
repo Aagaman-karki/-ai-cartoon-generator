@@ -153,3 +153,9 @@ animation_spec.json
 
 # Local Chrome shared libs extracted for headless renders
 .chromelibs/
+
+# Python venv for the audio stage (Kokoro TTS), see studio/scripts/spec_audio.py
+.audiovenv/
+
+# Python bytecode from the audio stage
+__pycache__/

@@ -13,9 +13,11 @@ Build the docs and the pipeline around those facts.
 | 1. Schema | `studio/src/spec/types.ts`, `studio/src/spec/validate.ts` | The contract: `AnimationSpec`, and a validator that turns untrusted model output into a typed spec plus derived timing. |
 | 2. Factory | `studio/src/spec/UniversalScene.tsx`, `studio/src/spec/backgrounds.tsx`, `studio/src/Atmosphere.tsx`, `studio/src/Character.tsx` | Declarative elements and environments → React. `BACKGROUNDS` is the environment registry; `ElementView` is the element registry. |
 | 2b. Timeline | `studio/src/spec/SpecMovie.tsx`, `studio/src/ChapterFade.tsx` | One `<Sequence>` per scene, chapter dips, optional burned-in narration. |
-| 2c. Audio | `studio/src/EpisodeAudio.tsx`, `studio/scripts/tts.py`, `studio/scripts/sfx.py` | Voiceover (Kokoro neural TTS) and a synthesised SFX bed, placed on the timeline by frame. |
+| 2c. Audio | `studio/src/EpisodeAudio.tsx`, `studio/src/spec/SpecAudio.tsx`, `studio/scripts/tts.py`, `studio/scripts/sfx.py`, `studio/scripts/spec_audio.py` | Voiceover (Kokoro neural TTS) and a synthesised SFX bed, placed on the timeline by frame. The hand-authored cut is mixed by hand in `EpisodeAudio`; a spec-driven cut is scored by `spec_audio.py` into `src/spec/audio/manifest.json`, which `SpecAudio` plays. |
 | 3. Automation | `generate_spec.js` | Prompt → Gemini → validated spec JSON written to `studio/src/specs/`. |
-| 4. Rendering | `studio/src/Root.tsx`, `studio/src/specs/index.ts` | Every spec becomes a `Spec-<slug>` composition, timed from `timingFor(spec)`. |
+| 4. Rendering | `studio/src/Root.tsx`, `studio/src/specs/index.ts`, `studio/scripts/render.mjs` | Every registered spec becomes a `Spec-<slug>` composition, timed from `timingFor(spec)`. `Spec-External` renders any spec file passed with `--props`, validated in `calculateMetadata`, so no import is needed; `npm run render` points it at the repo-root `animation_spec.json`. |
+| 4b. Smoke test | `studio/scripts/validate-render.mjs` | `npm run validate` bundles the studio, evaluates every composition's props and renders two stills each. |
+| 5. Pipeline | `run_pipeline.sh` | Prompt → validated spec → render, with a check in between; `--spec` re-renders an existing file. |
 
 The original hand-authored episode (`MainSequence.tsx` + the four `*Scene.tsx` files) is still
 registered as `WhatIfMoon`. It is the reference art for what the factory approximates; new work should
@@ -26,14 +28,19 @@ extend the factory instead of adding a fifth hand-written scene.
 1. Author the spec. Either let the model write it:
    `node generate_spec.js --prompt "What if the earth stopped rotating?" --out studio/src/specs/stopped-rotating.json`
    or write the JSON by hand for full control (see `studio/src/specs/time-stopped.json`).
-2. Register it: add the import and entry to `SPECS` in `studio/src/specs/index.ts`. Validation runs at
-   module load, so a bad spec fails fast with a list of problems.
+2. Register it *or not*: adding the import to `SPECS` in `studio/src/specs/index.ts` makes it a
+   permanent `Spec-<slug>` composition (validation runs at module load). For a one-off render, skip
+   registration and pass the file to `Spec-External` with `--props`, or just run
+   `./run_pipeline.sh --prompt "…"`, which generates, checks and renders in one step.
 3. Preview: `cd studio && npm run dev`, open the `Spec-<slug>` composition.
 4. Verify stills before a full render:
    `LD_LIBRARY_PATH=/tmp/chromelibs/usr/lib/x86_64-linux-gnu npx remotion still Spec-<slug> out/f.png --frame=N`
 5. Render: `LD_LIBRARY_PATH=… npx remotion render Spec-<slug> out/<slug>.mp4 --concurrency=2`
    (2 CPU cores in this sandbox — higher concurrency fails.)
-6. Typecheck: `cd studio && npm run typecheck`.
+   For an unregistered spec, `cd studio && npm run render` renders the repo-root
+   `animation_spec.json` through `Spec-External` (`npm run render -- ../other.json` for another file);
+   it resolves paths from the repo root, so it works from any directory.
+6. Typecheck and smoke-test: `cd studio && npm run typecheck && npm run validate`.
 
 ## Directing rules (enforced by review, encoded in the generator prompt)
 
@@ -82,6 +89,14 @@ If you add narration for a new episode, extend `narration.json` (id, frame marke
 `tts.py`, and add a matching entry — with the clip's length rounded to frames — to `VOICEOVER` so the
 bed ducks under it.
 
+Spec-driven episodes need none of that. `studio/scripts/spec_audio.py --spec <file>` reads
+`narration[]` and `scenes[].sfx` and writes `public/audio/spec/<slug>/` (one Kokoro clip per cue, an
+ambience bed, one sting per distinct tag) plus `src/spec/audio/manifest.json`, which `SpecMovie`
+imports through `SpecAudio`. `npm run render` runs it automatically before bundling (the manifest has
+to be on disk *before* the bundle is built); `--no-audio` renders silent. Commit the generated WAVs and
+the manifest so a render needs neither Python nor the model. Unknown `sfx` tags warn and are skipped —
+extend `STINGS` in `spec_audio.py` to give one a sound.
+
 ## Invariants
 
 * `durationInFrames` is always the sum of scene durations (`timingFor`). `totalDurationFrames` in a spec
@@ -91,13 +106,14 @@ bed ducks under it.
 * Composition is 1920×1080 at 30 fps unless a spec overrides it. Element coordinates are absolute
   composition pixels; `Character`'s `y` is the feet position.
 * Never commit `studio/out/` (git-ignored) or a generated spec containing secrets. API keys live in
-  environment variables (`GOOGLE_GENERATIVE_API_KEY`), never in the repo.
+  environment variables (`RESPAN_API_KEY` for the traced gateway route, `GOOGLE_GENERATIVE_API_KEY`
+  for the direct-Google fallback), never in the repo.
 
 ## Known limitations
 
-* **Spec episodes are silent.** `Spec-*` compositions ignore `narration[]` and `sfx[]`; the soundtrack
-  exists only for the hand-authored `WhatIfMoon` cut, wired by hand in `EpisodeAudio`. Generalising it
-  to specs means generating one clip per narration cue and placing it by `frameStart`.
+* **The spec mix is simpler than the hand mix.** Every `sfx` tag lands on its scene's first frame, so
+  a beat inside a scene cannot be cued without giving it its own scene; there is no music layer and no
+  compression — only the `BED_VOLUME`/`DUCK` constants in `SpecAudio.tsx`.
 * **Audio is verified by measurement, not by ear.** Renders were checked with `ffprobe` (stream present,
   duration matches) and the voiceover was transcribed back to text to confirm intelligibility. Nobody
   has listened for timbre or mix balance.
