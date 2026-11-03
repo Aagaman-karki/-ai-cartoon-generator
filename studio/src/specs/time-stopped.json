@@ -1,0 +1,92 @@
+{
+  "title": "The Day Time Stopped Synchronizing",
+  "slug": "time-stopped",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "theme": {
+    "primaryColor": "#FF9D00",
+    "secondaryColor": "#1A1A2E",
+    "accentColor": "#FF5E3A",
+    "fontFamily": "StudioSansBold"
+  },
+  "showNarration": true,
+  "narration": [
+    { "frameStart": 12, "text": "At 8:14 AM, the universe forgot how to tick." },
+    { "frameStart": 372, "text": "Every clock on Earth read the same frozen second." },
+    { "frameStart": 732, "text": "So the only way forward was backwards." }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "type": "vector_environment",
+      "durationFrames": 360,
+      "background": "open_horizon",
+      "backgroundOptions": { "sun": { "x": 960, "y": 660, "r": 180, "rays": true }, "seed": 5, "stars": 70 },
+      "camera": "slow_zoom_out",
+      "elements": [
+        { "type": "character", "x": 760, "y": 1000, "scale": 1.3, "action": "panicked", "actionStart": 120, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "8:14 AM",
+          "eyebrow": "CHAPTER 01",
+          "sub": "Then the second hand stopped.",
+          "x": 132,
+          "y": 200,
+          "size": "hero",
+          "animation": "slide_up",
+          "delay": 18
+        },
+        { "type": "hud_chip", "label": "CLOCK DRIFT", "value": "0.000 s", "tone": "alert", "x": 132, "y": 520 }
+      ],
+      "sfx": ["tick", "tick_stop"]
+    },
+    {
+      "id": "scene_2",
+      "type": "vector_environment",
+      "durationFrames": 360,
+      "background": "twilight_skyline",
+      "backgroundOptions": { "sun": { "x": 1300, "y": 660, "r": 140, "rays": true }, "seed": 44 },
+      "camera": "pan_down",
+      "elements": [
+        { "type": "character", "x": 520, "y": 898, "scale": 1.26, "action": "panicked", "actionStart": 30, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "THE CLOCK STOPS",
+          "eyebrow": "CHAPTER 02",
+          "sub": "Every city, the same frozen second.",
+          "x": 118,
+          "y": 150,
+          "animation": "spring_pop",
+          "delay": 12
+        },
+        { "type": "hud_chip", "label": "GLOBAL TIME", "value": "00:00:00", "tone": "alert", "x": 118, "y": 470 }
+      ],
+      "sfx": ["city_hum_stop"]
+    },
+    {
+      "id": "scene_3",
+      "type": "vector_environment",
+      "durationFrames": 360,
+      "background": "dome_interior",
+      "backgroundOptions": { "seed": 12, "stars": 24 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        { "type": "glow", "x": 340, "y": 820, "width": 420, "height": 470, "intensity": 0.22 },
+        { "type": "character", "x": 330, "y": 1072, "scale": 1.3, "action": "panicked", "actionStart": 10, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "REWIND",
+          "eyebrow": "CHAPTER 03",
+          "sub": "The only way forward is backwards.",
+          "x": 118,
+          "y": 160,
+          "animation": "fade",
+          "delay": 20
+        },
+        { "type": "hud_chip", "label": "TIMELINE INTEGRITY", "value": "3%", "tone": "alert", "x": 118, "y": 470 }
+      ],
+      "sfx": ["reverse_whoosh"]
+    }
+  ]
+}

@@ -17,26 +17,33 @@ storyboard lives in `cartoon_script.json` and whose scenes live in `studio/src/`
 
 ## Pipeline overview
 
+Two paths share one studio — the automated spec engine and the hand-authored original cut.
+
 ```
-   prompt (hard-coded in generate.js)
-            │
-            ▼
-   Google Gemini API  ──────────────►  cartoon_script.json
-   (generate.js)                       (raw API response: title, 4-scene
-            │                           storyboard table, VO, SFX, style notes)
-            ▼
-   manual translation of the storyboard into React/Remotion scenes
-            │
-            ▼
-   studio/src/MainSequence.tsx  ──►  4 × 400-frame <Sequence> blocks
-            │                         (Desk → Staircase → CitySkyline → Observatory)
-            ▼
-   remotion render  ────────────────►  studio/out/*.mp4  (1920×1080, 53.3 s, silent)
+  concept prompt  ──►  generate_spec.js  ──►  Google Gemini API
+                              │
+                              ▼
+                    studio/src/specs/<slug>.json   (AnimationSpec)
+                              │  validated at build time (validateSpec)
+                              ▼
+                    Studio: register in specs/index.ts → composition "Spec-<slug>"
+                              │
+                              ▼
+                    UniversalScene + BACKGROUNDS + ElementView
+                              │  (schema → declarative elements → React)
+                              ▼
+                    remotion render  ──►  studio/out/<slug>.mp4   (silent until the audio stage exists)
+
+  Hand-authored reference cut (unaffected by the above):
+  MainSequence.tsx ──► Desk → Staircase → CitySkyline → Observatory ──► composition "WhatIfMoon"
+
+  Legacy storyboard path (still manual):
+  generate.js ──► Gemini ──► cartoon_script.json (storyboard table for a human to read)
 ```
 
-There is no automation joining the stages: the script JSON is an input for a human, not something the
-studio parses. Each stage is currently run by hand, which is why the two halves of the repo only share
-the storyboard document.
+The spec engine is the intended way to make new episodes: a model (or you) writes JSON, the factory
+components render it. The original episode is kept as `WhatIfMoon` for reference art. The audio stage
+is not built — `narration[]` and `sfx[]` are data only, so renders are silent.
 
 ---
 
@@ -51,9 +58,20 @@ node generate.js                        # prints the JSON response to stdout
 cd studio
 npm install
 npm run dev                             # opens Remotion Studio (preview + scrubbing)
-npm run render                          # out/what-if-moon.mp4
+npm run render                          # out/what-if-moon.mp4  (hand-authored cut)
 npm run typecheck                       # tsc --noEmit
 npm run still -- --frame=150            # single PNG at a given frame
+```
+
+Spec-driven episodes:
+
+```bash
+# Inspect the exact request the generator would send (no key needed)
+node generate_spec.js --prompt "What if gravity turned off?" --dry-run
+
+# Generate a spec, register it in studio/src/specs/index.ts, then render it
+node generate_spec.js --prompt "What if gravity turned off?" --out studio/src/specs/gravity-off.json
+cd studio && npm run render:spec -- Spec-gravity-off out/gravity-off.mp4 --concurrency=2
 ```
 
 **Linux prerequisites.** Remotion drives headless Chrome, so the machine needs the Chrome shared
@@ -68,7 +86,9 @@ No system fonts are needed — the studio bundles its own (see `studio/src/fonts
 
 | Path | Kind | Purpose |
 | :--- | :--- | :--- |
+| `AGENTS.md` | Instructions | The engine blueprint for AI agents: architecture, directing rules, extension points, invariants. |
 | `generate.js` | Node script | Calls the Gemini `generateContent` endpoint and prints the script/storyboard JSON. |
+| `generate_spec.js` | Node script | Stage 1 of the engine: prompt → Gemini → validated `AnimationSpec` JSON (`--dry-run` needs no key). |
 | `cartoon_script.json` | Data (JSON) | Saved, unmodified Gemini response for the Moon episode. Source of truth for the storyboard. |
 | `studio/package.json` | Manifest | Remotion/React dependencies and the `dev`/`render`/`still`/`typecheck` scripts. |
 | `studio/tsconfig.json` | Config | `react-jsx`, strict, bundler resolution; scoped to `studio/src`. |
@@ -83,6 +103,14 @@ No system fonts are needed — the studio bundles its own (see `studio/src/fonts
 | `studio/src/ObservatoryScene.tsx` | Scene 4 | Domed control room, amber consoles, sweeping beacon, "SYNC LOST". |
 | `studio/src/Character.tsx` | Component | Shared SVG character (`x`, `y`, `scale`, `action`, `expression`, `actionStart`, `flip`). |
 | `studio/src/fonts.ts` | Module | Registers the bundled DejaVu Sans / Sans Bold / Sans Mono faces with `loadFont`. |
+| `studio/src/ChapterFade.tsx` | Component | Dips a chapter in/out of black; used by both timelines. |
+| `studio/src/spec/types.ts` | Schema | `AnimationSpec` and every element/background/camera variant. |
+| `studio/src/spec/validate.ts` | Validator | Turns untrusted model output into a typed spec + derived timing; readable error list. |
+| `studio/src/spec/backgrounds.tsx` | Factory | Five environments built from the atmosphere primitives, keyed by `BackgroundType`. |
+| `studio/src/spec/UniversalScene.tsx` | Factory | Renders one scene: background + camera move + elements, all from JSON. |
+| `studio/src/spec/SpecMovie.tsx` | Timeline | One `<Sequence>` per scene, chapter dips, optional burned-in narration. |
+| `studio/src/specs/*.json` | Data | Example specs: `what-if-moon`, `time-stopped`. |
+| `studio/src/specs/index.ts` | Registry | Validates every spec at import time and exposes `SPECS`. |
 | `studio/public/fonts/` | Assets | Bundled `DejaVuSans.ttf`, `DejaVuSans-Bold.ttf` and `DejaVuSansMono.ttf` (Bitstream Vera / DejaVu licence). |
 | `studio/out/` | Output | Renders and stills; git-ignored (`out` is in `.gitignore`). |
 | `what-if-moon.mp4` | Video | Earlier Moon edit (17,003,667 bytes, 1920×1080, **18.7 s, with AAC audio**). It predates the current scenes and is *not* reproducible from `studio/` — see [Video provenance](#video-provenance). |
@@ -195,6 +223,97 @@ families, or add another face to `public/fonts/` and register it there.
   belongs in the palette.
 * Light comes from one warm source per scene (sun, lamp, console, beacon); keep gold for what the
   viewer should look at and let shadows stay indigo.
+
+---
+
+## Animation engine (spec → video)
+
+A video is data. One `AnimationSpec` JSON file describes the whole film, and the studio renders it as a
+`Spec-<slug>` composition — no per-episode React code.
+
+### The contract
+
+```jsonc
+{
+  "title": "The Day Time Stopped Synchronizing",
+  "slug": "time-stopped",
+  "fps": 30, "width": 1920, "height": 1080,
+  "theme": { "primaryColor": "#FF9D00", "secondaryColor": "#1A1A2E", "accentColor": "#FF5E3A", "fontFamily": "StudioSansBold" },
+  "showNarration": true,
+  "narration": [ { "frameStart": 12, "text": "At 8:14 AM, the universe forgot how to tick." } ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "type": "vector_environment",
+      "durationFrames": 360,
+      "background": "open_horizon",
+      "backgroundOptions": { "sun": { "x": 960, "y": 660, "r": 180, "rays": true }, "seed": 5 },
+      "camera": "slow_zoom_out",
+      "elements": [
+        { "type": "character", "x": 760, "y": 1000, "scale": 1.3, "action": "panicked", "actionStart": 120, "expression": "shocked" },
+        { "type": "text_overlay", "text": "8:14 AM", "eyebrow": "CHAPTER 01", "sub": "Then the second hand stopped.", "x": 132, "y": 200, "size": "hero", "animation": "slide_up", "delay": 18 },
+        { "type": "hud_chip", "label": "CLOCK DRIFT", "value": "0.000 s", "tone": "alert", "x": 132, "y": 520 }
+      ],
+      "sfx": ["tick", "tick_stop"]
+    }
+  ]
+}
+```
+
+| Element | Fields | Renders as |
+| :--- | :--- | :--- |
+| `character` | `x`, `y` (feet), `scale`, `action`, `expression`, `actionStart`, `flip` | `Character` — springed pose, breathing, blink |
+| `text_overlay` | `text`, `x`, `y`, `eyebrow`, `sub`, `size` (`hero`/`header`/`sub`), `align`, `animation` (`spring_pop`/`fade`/`slide_up`), `delay` | `Title` |
+| `hud_chip` | `label`, `value`, `x`, `y`, `tone` (`gold`/`alert`), `align`, `delay` | `HudChip` |
+| `fracture` | `path` (SVG `M…L…`), `strokeWidth`, `color`, `delay`, `revealFrames` | Glowing fissure revealed by `strokeDashoffset` |
+| `particles` | `count`, `seed`, `opacity` | Deterministic dust motes |
+| `glow` | `x`, `y`, `width`, `height`, `color`, `intensity` | Soft key-light bloom |
+
+**Environments** (`background` + `backgroundOptions`): `dusk_room`, `twilight_skyline`,
+`floating_staircase`, `dome_interior`, `open_horizon`. Each is assembled from `Sky`, `Ridge`,
+`CityLine`, `Particles` and `Vignette`; the theme's `primaryColor` becomes the light source and
+`secondaryColor` tints the frame.
+
+### Validation and timing
+
+`validateSpec` (in `studio/src/spec/validate.ts`) is the gate between model output and the renderer. It
+returns either a typed spec or a list of readable errors — unknown background, duplicate scene id, bad
+hex colour, missing text, negative duration, unknown element type — and warnings for non-blocking
+problems (unbundled font, `totalDurationFrames` disagreeing with the scene sum, narration past the last
+frame). `specs/index.ts` calls it at import time, so a malformed spec fails the build instead of
+crashing 4,000 frames into a render.
+
+`durationInFrames` is always the **sum of scene durations** (`timingFor`), which is what `Root.tsx` and
+`SpecMovie` both use — the composition length cannot drift away from the timeline.
+
+### `generate_spec.js`
+
+```bash
+node generate_spec.js --prompt "What if the earth stopped rotating?" --out studio/src/specs/stopped.json
+node generate_spec.js --prompt "…" --dry-run        # print the request, send nothing
+```
+
+One Gemini call, `responseMimeType: application/json`, with a system instruction containing the schema
+and the directing rules (hook within 90 frames, one hero text per scene, alternating camera moves,
+warm-primary/cool-secondary palette, narration written for the ear). Output is fenced-JSON tolerant,
+checked structurally, and written with a summary line. No retries and no model fallback; `--dry-run`
+prints the exact request body so the prompt can be reviewed without a key.
+
+### Extending it
+
+Add an element in three places — `types.ts` (union variant), `validate.ts` (`validateElement` case),
+`UniversalScene.tsx` (`ElementView` case). Add a background in `backgrounds.tsx` (`BACKGROUNDS`) plus
+`BackgroundType`, and in the generator's `BACKGROUNDS` list. `AGENTS.md` documents the same workflow for
+AI agents.
+
+### What the engine does not do yet
+
+* **Audio.** `narration[]` and `sfx[]` are data only; nothing synthesises voice or sound, and renders
+  are silent. There is no Kokoro/TTS integration in the repo.
+* **Arbitrary art.** Six element types and five environments — a concept that needs anything else needs
+  a new element or environment first.
+* **Pixel parity with the hand-authored cut.** `Spec-what-if-moon` approximates the `WhatIfMoon` scenes;
+  the factory version omits details the element vocabulary cannot express.
 
 ---
 

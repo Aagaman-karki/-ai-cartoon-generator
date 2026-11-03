@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "remotion studio",
     "render": "remotion render WhatIfMoon out/what-if-moon.mp4",
+    "render:spec": "remotion render",
+    "generate": "node ../generate_spec.js",
     "still": "remotion still WhatIfMoon out/still.png",
     "typecheck": "tsc --noEmit"
   },

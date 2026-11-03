@@ -1,0 +1,139 @@
+{
+  "title": "What If the Moon Vanished?",
+  "slug": "what-if-moon",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "theme": {
+    "primaryColor": "#FFC857",
+    "secondaryColor": "#20143C",
+    "accentColor": "#E8683F",
+    "fontFamily": "StudioSansBold"
+  },
+  "showNarration": false,
+  "narration": [
+    { "frameStart": 20, "text": "At 8:14 AM, the universe forgot how to tick." },
+    { "frameStart": 420, "text": "Without the Moon, gravity starts to slip." },
+    { "frameStart": 820, "text": "The sky above every city begins to crack." },
+    { "frameStart": 1220, "text": "And somewhere, a clock gives up on time." }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "type": "vector_environment",
+      "durationFrames": 400,
+      "background": "dusk_room",
+      "backgroundOptions": {
+        "sun": { "x": 520, "y": 232, "r": 66 },
+        "seed": 31,
+        "stars": 44
+      },
+      "camera": "slow_zoom_in",
+      "elements": [
+        {
+          "type": "character",
+          "x": 1440,
+          "y": 906,
+          "scale": 1.2,
+          "action": "panicked",
+          "actionStart": 110,
+          "expression": "shocked"
+        },
+        {
+          "type": "text_overlay",
+          "text": "RIGHT NOW",
+          "eyebrow": "CHAPTER 01 · THE POP",
+          "sub": "The Moon is simply… gone.",
+          "x": 132,
+          "y": 548,
+          "size": "hero",
+          "animation": "spring_pop",
+          "delay": 236
+        },
+        { "type": "hud_chip", "label": "LUNAR SIGNAL", "value": "LOST", "tone": "alert", "x": 132, "y": 92 }
+      ],
+      "sfx": ["moon_pop", "lamp_flicker"]
+    },
+    {
+      "id": "scene_2",
+      "type": "vector_environment",
+      "durationFrames": 400,
+      "background": "floating_staircase",
+      "backgroundOptions": { "sun": { "x": 1452, "y": 704, "r": 132, "rays": true }, "seed": 9 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        { "type": "character", "x": 400, "y": 938, "scale": 0.98, "action": "panicked", "actionStart": 4, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "GRAVITY LETS GO",
+          "eyebrow": "CHAPTER 02",
+          "sub": "Nothing stays put for long.",
+          "x": 132,
+          "y": 150,
+          "delay": 10
+        },
+        { "type": "hud_chip", "label": "GRAVITY FIELD", "value": "UNSTABLE", "tone": "alert", "x": 132, "y": 430 }
+      ],
+      "sfx": ["rising_wind"]
+    },
+    {
+      "id": "scene_3",
+      "type": "vector_environment",
+      "durationFrames": 400,
+      "background": "twilight_skyline",
+      "backgroundOptions": { "sun": { "x": 1250, "y": 632, "r": 148, "rays": true }, "seed": 61 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        {
+          "type": "fracture",
+          "path": "M672 96 L806 208 L748 250 L918 352 L858 398 L980 470",
+          "strokeWidth": 6,
+          "delay": 26,
+          "revealFrames": 124
+        },
+        {
+          "type": "fracture",
+          "path": "M1180 150 L1092 236 L1160 292 L1054 372",
+          "strokeWidth": 4,
+          "delay": 66,
+          "revealFrames": 110
+        },
+        { "type": "character", "x": 500, "y": 898, "scale": 1.28, "action": "panicked", "actionStart": 2, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "THE SKY CRACKS",
+          "eyebrow": "CHAPTER 03",
+          "sub": "Above the city, the horizon gives way.",
+          "x": 118,
+          "y": 142,
+          "delay": 14
+        },
+        { "type": "hud_chip", "label": "TIMELINE INTEGRITY", "value": "42%", "tone": "alert", "x": 118, "y": 448 }
+      ],
+      "sfx": ["sky_crack", "low_rumble"]
+    },
+    {
+      "id": "scene_4",
+      "type": "vector_environment",
+      "durationFrames": 400,
+      "background": "dome_interior",
+      "backgroundOptions": { "seed": 88, "stars": 30 },
+      "camera": "slow_zoom_in",
+      "elements": [
+        { "type": "glow", "x": 340, "y": 820, "width": 420, "height": 470, "intensity": 0.24 },
+        { "type": "character", "x": 330, "y": 1072, "scale": 1.3, "action": "panicked", "actionStart": 20, "expression": "shocked" },
+        {
+          "type": "text_overlay",
+          "text": "SYNC LOST",
+          "eyebrow": "CHAPTER 04",
+          "sub": "The timeline comes apart.",
+          "x": 118,
+          "y": 154,
+          "delay": 16
+        },
+        { "type": "hud_chip", "label": "TIME CHANNEL", "value": "DESYNCHRONISED", "tone": "alert", "x": 118, "y": 430 }
+      ],
+      "sfx": ["alarm", "system_fail"]
+    }
+  ]
+}

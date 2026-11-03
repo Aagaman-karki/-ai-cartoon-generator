@@ -1,10 +1,10 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion';
+import { Sequence } from 'remotion';
+import { ChapterFade } from './ChapterFade';
 import { DeskScene } from './DeskScene';
 import { StaircaseScene } from './StaircaseScene';
 import { CitySkylineScene } from './CitySkylineScene';
 import { ObservatoryScene } from './ObservatoryScene';
-import { PALETTE, fadeIn, fadeOut } from './theme';
 
 /**
  * Master timeline for the "What If the Moon Vanished?" episode.
@@ -19,39 +19,27 @@ import { PALETTE, fadeIn, fadeOut } from './theme';
  */
 
 const CHAPTER = 400;
-/** Fade length at each end of a chapter, in frames (0.4 s at 30 fps). */
-const DIP = 12;
-
-const ChapterFade: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const frame = useCurrentFrame();
-  const opacity = Math.min(fadeIn(frame, 0, DIP), fadeOut(frame, CHAPTER, DIP));
-  return (
-    <AbsoluteFill style={{ backgroundColor: PALETTE.ink }}>
-      <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>
-    </AbsoluteFill>
-  );
-};
 
 export const MainSequence: React.FC = () => {
   return (
     <>
       <Sequence from={0} durationInFrames={CHAPTER}>
-        <ChapterFade>
+        <ChapterFade durationInFrames={CHAPTER}>
           <DeskScene />
         </ChapterFade>
       </Sequence>
       <Sequence from={400} durationInFrames={CHAPTER}>
-        <ChapterFade>
+        <ChapterFade durationInFrames={CHAPTER}>
           <StaircaseScene />
         </ChapterFade>
       </Sequence>
       <Sequence from={800} durationInFrames={CHAPTER}>
-        <ChapterFade>
+        <ChapterFade durationInFrames={CHAPTER}>
           <CitySkylineScene />
         </ChapterFade>
       </Sequence>
       <Sequence from={1200} durationInFrames={CHAPTER}>
-        <ChapterFade>
+        <ChapterFade durationInFrames={CHAPTER}>
           <ObservatoryScene />
         </ChapterFade>
       </Sequence>

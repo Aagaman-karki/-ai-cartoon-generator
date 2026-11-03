@@ -409,7 +409,17 @@ export type TitleProps = {
   delay?: number;
   /** Gold underline width in px; 0 hides it. */
   ruleWidth?: number;
+  /** Header colour; defaults to the studio gold. */
+  accent?: string;
+  /** Subtext colour; defaults to white. */
+  subColor?: string;
+  /** Type size: `hero` is the retention hook, `sub` the quiet chapter card. */
+  size?: 'hero' | 'header' | 'sub';
+  /** Entrance style. `spring_pop` (default) springs, `fade` and `slide_up` ease. */
+  animation?: 'spring_pop' | 'fade' | 'slide_up';
 };
+
+const TITLE_SIZES = { hero: TYPE.hero, header: TYPE.header, sub: 56 } as const;
 
 /**
  * Focal title: gold, heavy, tightly tracked header over white subtext, with a gold rule that wipes
@@ -424,12 +434,18 @@ export const Title: React.FC<TitleProps> = ({
   y,
   delay = 8,
   ruleWidth = 220,
+  accent = PALETTE.gold,
+  subColor = PALETTE.white,
+  size = 'header',
+  animation = 'spring_pop',
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const enter = pop(frame, fps, delay, { damping: 18, stiffness: 90, mass: 0.8 });
-  const rule = pop(frame, fps, delay);
-  const translateY = track(frame, [delay, delay + 26], [26, 0]);
+  const springEnter = pop(frame, fps, delay, { damping: 18, stiffness: 90, mass: 0.8 });
+  const easedEnter = track(frame, [delay, delay + 22], [0, 1]);
+  const enter = animation === 'spring_pop' ? springEnter : easedEnter;
+  const rule = animation === 'spring_pop' ? pop(frame, fps, delay) : easedEnter;
+  const translateY = animation === 'slide_up' ? track(frame, [delay, delay + 24], [44, 0]) : track(frame, [delay, delay + 26], [26, 0]);
 
   return (
     <div
@@ -438,7 +454,7 @@ export const Title: React.FC<TitleProps> = ({
         left: x,
         top: y,
         textAlign: align,
-        transform: `translateY(${translateY}px) scale(${0.94 + enter * 0.06})`,
+        transform: `translateY(${translateY}px) scale(${animation === 'spring_pop' ? 0.94 + enter * 0.06 : 1})`,
         transformOrigin: align === 'center' ? '50% 50%' : align === 'right' ? '100% 50%' : '0% 50%',
         opacity: Math.min(1, enter * 1.4),
       }}
@@ -449,7 +465,8 @@ export const Title: React.FC<TitleProps> = ({
             fontFamily: SANS_BOLD,
             fontSize: TYPE.eyebrow,
             letterSpacing: 8,
-            color: PALETTE.goldSoft,
+            color: accent,
+            opacity: 0.85,
             textShadow: `0 2px 18px ${PALETTE.ink}`,
             marginBottom: 10,
           }}
@@ -460,9 +477,9 @@ export const Title: React.FC<TitleProps> = ({
       <div
         style={{
           fontFamily: SANS_BOLD,
-          fontSize: TYPE.header,
+          fontSize: TITLE_SIZES[size],
           letterSpacing: -1,
-          color: PALETTE.gold,
+          color: accent,
           lineHeight: 1.02,
           textShadow: `0 6px 0 ${PALETTE.shadowDeep}, 0 18px 48px ${PALETTE.ink}CC, 0 0 70px ${PALETTE.amber}55`,
         }}
@@ -478,8 +495,8 @@ export const Title: React.FC<TitleProps> = ({
             marginLeft: align === 'center' ? 'auto' : undefined,
             marginRight: align === 'center' || align === 'left' ? 'auto' : 0,
             borderRadius: 4,
-            background: `linear-gradient(90deg, ${PALETTE.gold}, ${PALETTE.ember})`,
-            boxShadow: `0 0 24px ${PALETTE.amber}99`,
+            background: `linear-gradient(90deg, ${accent}, ${PALETTE.ember})`,
+            boxShadow: `0 0 24px ${accent}99`,
           }}
         />
       ) : null}
@@ -488,7 +505,7 @@ export const Title: React.FC<TitleProps> = ({
           style={{
             fontFamily: SANS,
             fontSize: TYPE.sub,
-            color: PALETTE.white,
+            color: subColor,
             marginTop: 14,
             letterSpacing: 0.5,
             textShadow: `0 2px 14px ${PALETTE.ink}`,
@@ -511,14 +528,16 @@ export type HudChipProps = {
   y: number;
   align?: 'left' | 'right';
   delay?: number;
+  /** Overrides the tone colour. */
+  accent?: string;
 };
 
 /** Small system readout, used sparingly so it never competes with the focal title. */
-export const HudChip: React.FC<HudChipProps> = ({ label, value, tone = 'gold', x, y, align = 'left', delay = 4 }) => {
+export const HudChip: React.FC<HudChipProps> = ({ label, value, tone = 'gold', x, y, align = 'left', delay = 4, accent: accentProp }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = pop(frame, fps, delay, { damping: 20, stiffness: 120 });
-  const accent = tone === 'alert' ? PALETTE.ember : PALETTE.gold;
+  const accent = accentProp ?? (tone === 'alert' ? PALETTE.ember : PALETTE.gold);
 
   return (
     <div
