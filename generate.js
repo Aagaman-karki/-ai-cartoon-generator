@@ -1,3 +1,15 @@
+/**
+ * Script generator for the "What If…?" cartoon pipeline.
+ *
+ * Sends one hard-coded prompt to the Google Gemini `generateContent` endpoint and prints the raw
+ * JSON response to stdout (prefixed with `RESULT:`). The Markdown storyboard it returns is what
+ * ends up in cartoon_script.json; this script never writes that file itself.
+ *
+ * Requires Node 18+ (global fetch) and GOOGLE_GENERATIVE_API_KEY.
+ * Usage: node generate.js   (or: node generate.js > out.json)
+ */
+
+// Model and prompt are the two knobs for a new episode.
 const apiKey = process.env.GOOGLE_GENERATIVE_API_KEY;
 
 async function run() {
