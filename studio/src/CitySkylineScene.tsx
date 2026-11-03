@@ -7,7 +7,8 @@ import { MONO, SANS } from './fonts';
  * Storyboard beat 3 — "The Earth wobble", shown as a city skyline under a fracturing sky.
  *
  * Visuals: silhouette skyline, two glowing "temporal rift" bars that widen across the 400-frame
- * sequence (the upper one jitters for a glitch feel), and a character looking up in shock.
+ * sequence (the upper one jitters for a glitch feel), and a character on a foreground rooftop
+ * looking up in shock (rooftop top edge at y=960 — keep the figure's feet there).
  *
  * Uses ./Character for the figure, and ./fonts for the HUD face.
  */
@@ -36,8 +37,15 @@ export const CitySkylineScene: React.FC = () => {
       <div style={{ position: 'absolute', top: 80, left: '30%', width: `${fractureWidth}%`, height: 6, backgroundColor: '#38BDF8', boxShadow: '0 0 30px #38BDF8, 0 0 60px #EF4444', transform: `translateX(${skyGlitch}px)` }} />
       <div style={{ position: 'absolute', top: 120, left: '40%', width: `${fractureWidth * 0.8}%`, height: 4, backgroundColor: '#FBBF24', boxShadow: '0 0 20px #FBBF24' }} />
 
-      {/* Character looking up in awe/terror */}
-      <Character x={480} y={420} scale={1.3} action='panicked' expression='shocked' />
+      {/* Foreground rooftop the character stands on (top edge at y=960) */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 120, backgroundColor: '#020617' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 10, backgroundColor: '#0F172A', borderTop: '3px solid #1E293B', boxSizing: 'border-box' }} />
+        <div style={{ position: 'absolute', top: -60, left: 1180, width: 96, height: 60, backgroundColor: '#0B1220', border: '2px solid #1E293B', borderRadius: 6, boxSizing: 'border-box' }} />
+        <div style={{ position: 'absolute', top: -26, left: 1300, width: 46, height: 26, backgroundColor: '#0B1220', border: '2px solid #1E293B', borderRadius: 4, boxSizing: 'border-box' }} />
+      </div>
+
+      {/* Character on the rooftop, looking up in awe/terror */}
+      <Character x={480} y={960} scale={1.3} action='panicked' expression='shocked' />
 
       {/* Cinematic Banner */}
       <div style={{ position: 'absolute', top: 40, right: 70, backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: '12px 24px', borderRadius: 12, border: '2px solid #38BDF8' }}>

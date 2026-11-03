@@ -8,6 +8,7 @@ import { MONO, SANS } from './fonts';
  *
  * Visuals: radial control-room gradient, a console row whose side panels pulse red, a central
  * readout whose glow ramps from 0.5 to 1 over the 400-frame sequence, and a critical-error banner.
+ * The character is drawn behind the console row (feet at y=900) so the desk hides its legs.
  *
  * Uses ./Character for the figure, and ./fonts for the HUD face.
  */
@@ -22,6 +23,9 @@ export const ObservatoryScene: React.FC = () => {
       {/* Control room background */}
       <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'radial-gradient(circle at 50% 30%, #1E1B4B 0%, #030712 70%)' }} />
 
+      {/* Character working the console — drawn before the console row so the desk occludes its legs */}
+      <Character x={500} y={900} scale={1.25} action='panicked' expression='shocked' />
+
       {/* Control consoles with flashing lights */}
       <div style={{ position: 'absolute', bottom: 0, width: '100%', height: 260, backgroundColor: '#0F172A', borderTop: '8px solid #334155', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '0 40px' }}>
         <div style={{ width: 220, height: 120, backgroundColor: '#1E293B', borderRadius: 12, border: `3px solid ${alertPulse}`, boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)' }} />
@@ -32,8 +36,6 @@ export const ObservatoryScene: React.FC = () => {
         <div style={{ width: 220, height: 120, backgroundColor: '#1E293B', borderRadius: 12, border: `3px solid ${alertPulse}`, boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)' }} />
       </div>
 
-      {/* Character at console */}
-      <Character x={500} y={400} scale={1.25} action='panicked' expression='shocked' />
 
       {/* Emergency Warning Banner */}
       <div style={{ position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#EF4444', padding: '10px 30px', borderRadius: 8, boxShadow: '0 0 30px rgba(239, 68, 68, 0.6)' }}>

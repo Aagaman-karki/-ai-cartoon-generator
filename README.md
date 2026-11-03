@@ -4,13 +4,14 @@ An experimental pipeline for producing short **"What If…?" explainer cartoons*
 timed script and storyboard, a human (or coding agent) turns that storyboard into
 [Remotion](https://www.remotion.dev/) (React) scenes, and Remotion renders the animation to MP4.
 
-The only episode finished so far is **"What If the Moon Vanished?"** — a ~15-second short whose
-generated storyboard lives in `cartoon_script.json`, whose studio scenes live in `studio/src/`, and
-whose render is `what-if-moon.mp4`.
+The only episode so far is **"What If the Moon Vanished?"** — a ~15-second short whose generated
+storyboard lives in `cartoon_script.json` and whose scenes live in `studio/src/`. The checked-in
+`what-if-moon.mp4` is an earlier 18.7-second edit of that episode; the current studio renders a
+53.3-second silent version (see [Video provenance](#video-provenance)).
 
 > **Status:** the studio builds, typechecks and renders (verified with Remotion 4 + headless Chrome).
-> Script generation works end to end. There is no audio track and no narration yet, and the scene art
-> is deliberately minimal — see [Known gaps](#known-gaps).
+> Script generation works end to end. The studio has no audio track or narration, and the scene art is
+> deliberately minimal — see [Known gaps](#known-gaps).
 
 ---
 
@@ -30,7 +31,7 @@ whose render is `what-if-moon.mp4`.
    studio/src/MainSequence.tsx  ──►  4 × 400-frame <Sequence> blocks
             │                         (Desk → Staircase → CitySkyline → Observatory)
             ▼
-   remotion render  ────────────────►  what-if-moon.mp4  (1920×1080, ~53 s)
+   remotion render  ────────────────►  studio/out/*.mp4  (1920×1080, 53.3 s, silent)
 ```
 
 There is no automation joining the stages: the script JSON is an input for a human, not something the
@@ -82,7 +83,7 @@ No system fonts are needed — the studio bundles its own (see `studio/src/fonts
 | `studio/src/fonts.ts` | Module | Registers the bundled DejaVu Sans / Sans Mono faces with `loadFont`. |
 | `studio/public/fonts/` | Assets | Bundled `DejaVuSans.ttf` and `DejaVuSansMono.ttf` (Bitstream Vera / DejaVu licence). |
 | `studio/out/` | Output | Renders and stills; git-ignored (`out` is in `.gitignore`). |
-| `what-if-moon.mp4` | Video | Rendered Moon episode (17,003,667 bytes, 1920×1080). |
+| `what-if-moon.mp4` | Video | Earlier Moon edit (17,003,667 bytes, 1920×1080, **18.7 s, with AAC audio**). It predates the current scenes and is *not* reproducible from `studio/` — see [Video provenance](#video-provenance). |
 | `opencode.json` | Config | [opencode](https://opencode.ai) agent config: free OpenRouter Llama 3 8B model. |
 | `cartoons/.opencode/commands/what-if.md` | Command | opencode slash-command that loads a `what-if-animation` skill. |
 | `cartoons/.claude/skills/what-if-animation` | Git submodule | Episode workflow skill. **Not initialised** — the directory is empty. |
@@ -119,15 +120,18 @@ The scenes are thematic interpretations of the storyboard, not literal frames of
   over 70 frames, the stars fade, a black overlay ramps to 0.92 opacity, and the caption "RIGHT NOW"
   scales in at frame ~240. The HUD badge flips from "LUNAR SIGNAL: STABLE" to "LOST"; the character
   flinches from `idle/neutral` to `panicked/shocked`.
-* **`StaircaseScene`** — Whole-set pan of 50 px over 400 frames over an indigo gradient; a cat made of
-  divs (clip-path ears, glowing eyes, rotated tail) bobs on `sin(frame * 0.08) * 12`; three dust
-  specks; character at (580, 450).
+* **`StaircaseScene`** — Whole-set pan of 50 px over 400 frames over an indigo gradient; a hallway
+  floor at y=450 with faint receding perspective lines and two wall guide lines meeting behind the
+  character; a cat made of divs (clip-path ears, glowing eyes, rotated tail) bobs on
+  `sin(frame * 0.08) * 12` above it; three dust specks; character at (580, 450) standing on the floor.
 * **`CitySkylineScene`** — Six flex-sized silhouette blocks; two rift bars grow from 0 % to
-  100 % / 80 % width across the sequence, the upper one jittering by `sin(frame * 0.2) * 8`; character
-  at (480, 420) looking up.
+  100 % / 80 % width across the sequence, the upper one jittering by `sin(frame * 0.2) * 8`; a
+  foreground rooftop (top edge y=960, two vents) gives the character at (480, 960) something to stand
+  on while it looks up.
 * **`ObservatoryScene`** — Radial control-room gradient; console row whose side panels alternate
   between red and indigo every half cycle of `sin(frame * 0.3)`; central readout whose glow fades in
-  from 0.5 to 1; centered critical-error banner; character at (500, 400).
+  from 0.5 to 1; centered critical-error banner; the character (feet at y=900) is drawn *before* the
+  console row so the desk occludes its legs.
 
 ### `Character`
 
@@ -186,17 +190,31 @@ An API response dump kept verbatim for provenance:
 
 ---
 
+## Video provenance
+
+The two video artifacts in this repo are **not the same edit**:
+
+| File | Length | Audio | Reproducible from `studio/`? |
+| :--- | :--- | :--- | :--- |
+| `what-if-moon.mp4` | 18.71 s, 6,959 kb/s | AAC, 48 kHz stereo | No — predates the current scenes and timeline |
+| `studio/out/what-if-moon-full.mp4` (git-ignored) | 53.33 s, 317 kb/s | None | Yes — `npm run render` |
+
+The checked-in video is kept as the finished earlier cut; the studio source is a later, longer
+rebuild that has not yet been re-cut to that 18.7-second edit or given audio. Pick one as canonical
+before publishing either.
+
 ## Known gaps
 
 | Issue | Impact | Suggested fix |
 | :--- | :--- | :--- |
-| No audio | Storyboard specifies VO and SFX; renders are silent | Add `<Audio>` / `<Series>` and voice clips, then re-render |
-| Scene art is sparse | Characters hover above an implicit ground in scenes 2–4; little mid-ground detail | Add ground planes / set dressing, or reposition characters per scene |
+| Studio renders are silent | Storyboard specifies VO and SFX | Add `<Audio>` / `<Series>` with voice clips and an SFX bed, then re-render |
+| Studio cut (53 s) and committed video (18.7 s) diverged | Two different edits of the same episode | Re-cut the composition to the shorter edit, or adopt the 53 s cut and replace the video |
+| Scene art is sparse | Little mid-ground detail; scenes are flat colour blocks | Add set dressing and parallax layers |
 | `what-if-animation` submodule uninitialised | Workflow skill unavailable on a fresh clone | Add `.gitmodules`, or vendor the skill into `cartoons/.claude/skills/what-if-animation/` |
 | `generate.js` hard-codes prompt and model | One episode per source edit | Accept `--prompt`/`--out` args and a `MODEL` env var; write output to a file; exit non-zero on API errors |
 | Root and `cartoons/` lockfiles are empty | Misleading; implies npm projects that do not exist | Delete them, or scaffold the matching `package.json` files |
 | `glm.js.save` | Noise | Delete |
-| 17 MB MP4 in Git | Slow clones | Move renders to releases/LFS, or git-ignore them |
+| 17 MB MP4 in Git (with audio) | Slow clones; binary in history | Move renders to releases/LFS, or git-ignore them |
 | `opencode.json` points at an 8B Llama model | Fine for scaffolding, weak for production scripts | Point at a stronger model via OpenRouter |
 
 ## License

@@ -22,6 +22,26 @@ export const StaircaseScene: React.FC = () => {
       <div style={{ position: 'absolute', width: '100%', height: '100%', transform: `translateY(${panY}px)` }}>
         <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'linear-gradient(180deg, #1E1B4B 0%, #0F172A 100%)' }} />
 
+        {/* Hallway floor: the character stands on this line, so keep its top edge at y=450 */}
+        <div style={{ position: 'absolute', top: 450, left: 0, width: '100%', height: '100%', background: 'linear-gradient(180deg, #1B2038 0%, #0A0F1F 100%)', borderTop: '4px solid #334155' }} />
+        {[0, 1, 2, 3].map((line) => (
+          <div
+            key={line}
+            style={{
+              position: 'absolute',
+              top: 500 + line * line * 60,
+              left: 0,
+              width: '100%',
+              height: Math.max(1, 3 - line),
+              backgroundColor: '#38BDF8',
+              opacity: 0.14 - line * 0.03,
+            }}
+          />
+        ))}
+        {/* Two walls receding to the vanishing point behind the character */}
+        <div style={{ position: 'absolute', top: 450, left: 0, width: 580, height: 3, backgroundColor: '#334155', transformOrigin: '100% 50%', transform: 'rotate(-9deg)', opacity: 0.7 }} />
+        <div style={{ position: 'absolute', top: 450, left: 580, width: 600, height: 3, backgroundColor: '#334155', transformOrigin: '0% 50%', transform: 'rotate(9deg)', opacity: 0.7 }} />
+
         <div style={{ position: 'absolute', left: 350, top: 220 + catFloat, width: 90, height: 60, backgroundColor: '#334155', borderRadius: 30, boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)' }}>
           <div style={{ position: 'absolute', top: -20, left: 15, width: 20, height: 25, backgroundColor: '#334155', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
           <div style={{ position: 'absolute', top: -20, right: 15, width: 20, height: 25, backgroundColor: '#334155', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
