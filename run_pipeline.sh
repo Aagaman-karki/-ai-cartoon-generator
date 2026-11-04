@@ -9,6 +9,8 @@
 # Steps, each of which fails loudly instead of handing a broken spec to the renderer:
 #   1. generate   — generate_spec.js writes a validated AnimationSpec (needs a Gemini key)
 #   2. check      — the file exists, parses as JSON, and has scenes summing to a real duration
+#   2b. score      — spec_audio.py writes the voiceover, bed and stings + the manifest they're
+#                    placed by (skipped with a warning if Python is unavailable)
 #   3. render     — Remotion renders it through the Spec-External composition
 #
 # Why generate_spec.js and not generate.js: generate.js is the generic prompt → JSON utility and
@@ -74,6 +76,23 @@ echo "==> Spec OK: $SPEC_FILE — $SCENES scenes, $CUES narration cues, $FRAMES 
 
 [[ -n "$OUT_FILE" ]] || OUT_FILE="studio/out/${SLUG}.mp4"
 mkdir -p "$(dirname "$OUT_FILE")"
+
+# 2b. Score ---------------------------------------------------------------------------------------
+# Must happen before the bundle is built: SpecMovie imports src/spec/audio/manifest.json, so the
+# manifest has to be on disk or the render comes out silent. Missing Python is a warning, not an error.
+PYTHON_BIN="${SPEC_AUDIO_PYTHON:-}"
+if [[ -z "$PYTHON_BIN" ]]; then
+  for candidate in "$PWD/.audiovenv/bin/python" python3; do
+    if [[ -x "$candidate" ]] || command -v "$candidate" >/dev/null 2>&1; then PYTHON_BIN="$candidate"; break; fi
+  done
+fi
+if [[ -n "$PYTHON_BIN" ]]; then
+  echo "==> Scoring audio: voiceover + bed + stings ($PYTHON_BIN)"
+  "$PYTHON_BIN" studio/scripts/spec_audio.py --spec "$SPEC_FILE" \
+    || echo "warning: audio stage failed — rendering without voiceover" >&2
+else
+  echo "==> No Python interpreter found — rendering without voiceover" >&2
+fi
 
 # 3. Render ---------------------------------------------------------------------------------------
 # Rendering from studio/ so Remotion picks up its package.json/config; --props is resolved from there.
