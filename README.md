@@ -92,6 +92,7 @@ cd studio && npm run render:spec -- Spec-gravity-off out/gravity-off.mp4 --concu
 ```bash
 ./run_pipeline.sh --prompt "What if the Earth stopped rotating?"
 ./run_pipeline.sh --spec animation_spec.json      # render an existing spec, no API call
+./run_pipeline.sh --prompt "…" --model gemini-3.8-flash --frames 3600   # pick the model, shorter cut
 CONCURRENCY=2 ./run_pipeline.sh --prompt "…"      # small machine
 ```
 

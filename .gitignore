@@ -154,6 +154,9 @@ animation_spec.json
 # Local Chrome shared libs extracted for headless renders
 .chromelibs/
 
+# Headless Chrome downloaded by `npx remotion browser ensure`
+.remotion/
+
 # Python venv for the audio stage (Kokoro TTS), see studio/scripts/spec_audio.py
 .audiovenv/
 

@@ -102,7 +102,8 @@ export const RemotionRoot: React.FC = () => {
           const result = validateSpec(props);
           if (!result.ok) {
             throw new Error(
-              `animation_spec.json is not a valid AnimationSpec (${result.errors.length} problem(s)):\n- ${result.errors.join('\n- ')}`,
+              `The spec passed to Spec-External (--props) is not a valid AnimationSpec ` +
+                `(${result.errors.length} problem(s)):\n- ${result.errors.join('\n- ')}`,
             );
           }
           result.warnings.forEach((warning) => console.warn(`[spec] ${warning}`));

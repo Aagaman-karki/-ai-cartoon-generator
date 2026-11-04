@@ -36,7 +36,7 @@ SCENES=""
 SKIP_GENERATE=0
 
 usage() {
-  sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -75,7 +75,7 @@ fi
 [[ -f "$SPEC_FILE" ]] || { echo "error: $SPEC_FILE was not created" >&2; exit 1; }
 [[ -s "$SPEC_FILE" ]] || { echo "error: $SPEC_FILE is empty" >&2; exit 1; }
 
-read -r SLUG FRAMES SCENES CUES <<<"$(node -e '
+read -r SLUG SPEC_FRAMES SCENE_COUNT CUES <<<"$(node -e '
   const fs = require("node:fs");
   const spec = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   const scenes = Array.isArray(spec.scenes) ? spec.scenes : [];
@@ -85,10 +85,21 @@ read -r SLUG FRAMES SCENES CUES <<<"$(node -e '
   console.log([spec.slug || "spec", frames, scenes.length, (spec.narration || []).length].join(" "));
 ' "$SPEC_FILE")" || { echo "error: $SPEC_FILE is not a usable spec (see above)" >&2; exit 1; }
 
-echo "==> Spec OK: $SPEC_FILE — $SCENES scenes, $CUES narration cues, $FRAMES frames ($(awk "BEGIN{printf \"%.1f\", $FRAMES/30}")s)"
+echo "==> Spec OK: $SPEC_FILE — $SCENE_COUNT scenes, $CUES narration cues, $SPEC_FRAMES frames ($(awk "BEGIN{printf \"%.1f\", $SPEC_FRAMES/30}")s)"
 
 [[ -n "$OUT_FILE" ]] || OUT_FILE="studio/out/${SLUG}.mp4"
 mkdir -p "$(dirname "$OUT_FILE")"
+
+# Checked before the audio stage, which is slow and pointless if the render cannot start.
+# `npx remotion` in an uninstalled tree answers with "could not determine executable to run", which
+# reads like a broken repo rather than a missing install.
+REMOTION_BIN="studio/node_modules/.bin/remotion"
+[[ -f "$REMOTION_BIN.exe" ]] && REMOTION_BIN="$REMOTION_BIN.exe"
+if [[ ! -x "$REMOTION_BIN" ]]; then
+  echo "error: Remotion is not installed in studio/node_modules." >&2
+  echo "       Run:  cd studio && npm install && npx remotion browser ensure" >&2
+  exit 1
+fi
 
 # 2b. Score ---------------------------------------------------------------------------------------
 # Must happen before the bundle is built: SpecMovie imports src/spec/audio/manifest.json, so the
@@ -113,9 +124,9 @@ SPEC_ABS="$(cd "$(dirname "$SPEC_FILE")" && pwd)/$(basename "$SPEC_FILE")"
 OUT_ABS="$(cd "$(dirname "$OUT_FILE")" && pwd)/$(basename "$OUT_FILE")"
 
 RENDER_ARGS=(render Spec-External "$OUT_ABS" "--props=$SPEC_ABS")
-[[ -n "${CONCURRENCY:-}" ]] && RENDER_ARGS+=("--concurrency=$CONCURRENCY")
+if [[ -n "${CONCURRENCY:-}" ]]; then RENDER_ARGS+=("--concurrency=$CONCURRENCY"); fi
 
 echo "==> Rendering Spec-External → $OUT_FILE"
-(cd studio && npx remotion "${RENDER_ARGS[@]}")
+(cd studio && "./node_modules/.bin/${REMOTION_BIN##*/}" "${RENDER_ARGS[@]}")
 
 echo "==> Done: $OUT_FILE"
