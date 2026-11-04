@@ -5,7 +5,7 @@
 hand-placed in a component the way `EpisodeAudio` does it for the hand-authored cut. This script reads a
 spec and writes what that episode needs:
 
-    voiceover/<slug>/vo-<n>.wav   one Kokoro clip per `narration[]` cue, at `frameStart`
+    spec/<slug>/vo-<n>.wav        one Kokoro clip per `narration[]` cue, at `frameStart`
     spec/<slug>/bed.wav           ambience filling the whole episode
     spec/<slug>/sting-<tag>.wav   one sting per distinct `scenes[].sfx` tag
     src/spec/audio/manifest.json  where each file goes on the timeline (merged, keyed by slug)
@@ -236,6 +236,21 @@ def voiceover(cues: list[dict], fps: int, out_dir: Path, args) -> list[dict]:
     return entries
 
 
+def merge_manifest(path: Path, slug: str, entry: dict) -> None:
+    """Replace this slug's entry, keeping every other slug's soundtrack intact."""
+    manifest: dict = {}
+    if path.exists():
+        try:
+            manifest = json.loads(path.read_text()) or {}
+        except json.JSONDecodeError:
+            print(f"! {path.name} was not valid JSON — rewriting it")
+            manifest = {}
+    manifest[slug] = entry
+    manifest = {key: manifest[key] for key in sorted(manifest)}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--spec", type=Path, required=True, help="AnimationSpec JSON to score")
@@ -265,6 +280,17 @@ def main() -> int:
     if out_dir.exists() and not args.keep:
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Clear this slug's cues *before* writing new clips: the old files are gone, and a crash midway
+    # would otherwise leave the manifest pointing at WAVs that no longer exist, failing the render.
+    merge_manifest(args.manifest, slug, {
+        "slug": slug,
+        "fps": fps,
+        "durationFrames": frames,
+        "bed": None,
+        "voiceover": [],
+        "events": [],
+    })
 
     print(f"{slug}: {len(spec.get('scenes') or [])} scenes, {frames} frames, {duration:.1f}s")
 
@@ -308,14 +334,7 @@ def main() -> int:
 
     entries = voiceover(spec.get("narration") or [], fps, out_dir, args)
 
-    manifest = {}
-    if args.manifest.exists():
-        try:
-            manifest = json.loads(args.manifest.read_text()) or {}
-        except json.JSONDecodeError:
-            print(f"! {args.manifest.name} was not valid JSON — rewriting it")
-            manifest = {}
-    manifest[slug] = {
+    merge_manifest(args.manifest, slug, {
         "slug": slug,
         "fps": fps,
         "durationFrames": frames,
@@ -323,10 +342,7 @@ def main() -> int:
         "bed": bed,
         "voiceover": entries,
         "events": events,
-    }
-    manifest = {key: manifest[key] for key in sorted(manifest)}
-    args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
+    })
 
     print(f"→ {len(entries)} voice clip(s), {len(events)} event(s), bed {'yes' if bed else 'no'}")
     print(f"→ manifest {args.manifest}")
