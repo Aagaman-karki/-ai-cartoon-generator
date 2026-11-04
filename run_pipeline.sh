@@ -5,6 +5,9 @@
 #   ./run_pipeline.sh --prompt "What if the earth stopped rotating?"
 #   ./run_pipeline.sh --spec animation_spec.json        # render an existing spec, no API call
 #   ./run_pipeline.sh --prompt "…" --out out/earth.mp4
+#   ./run_pipeline.sh --prompt "…" --model gemini-3.8-flash --frames 3600 --scenes 6-8
+#
+# Generation flags (--model, --frames, --scenes) are forwarded to generate_spec.js; see its --help.
 #
 # Steps, each of which fails loudly instead of handing a broken spec to the renderer:
 #   1. generate   — generate_spec.js writes a validated AnimationSpec (needs a Gemini key)
@@ -27,6 +30,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 SPEC_FILE="animation_spec.json"
 OUT_FILE=""
 PROMPT=""
+MODEL=""
+FRAMES=""
+SCENES=""
 SKIP_GENERATE=0
 
 usage() {
@@ -39,6 +45,9 @@ while [[ $# -gt 0 ]]; do
     --prompt) PROMPT="${2:-}"; shift 2 ;;
     --spec) SPEC_FILE="${2:-}"; shift 2 ;;
     --out) OUT_FILE="${2:-}"; shift 2 ;;
+    --model) MODEL="${2:-}"; shift 2 ;;
+    --frames) FRAMES="${2:-}"; shift 2 ;;
+    --scenes) SCENES="${2:-}"; shift 2 ;;
     --skip-generate) SKIP_GENERATE=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "Unknown argument: $1" >&2; usage 1 ;;
@@ -53,7 +62,11 @@ fi
 # 1. Generate -------------------------------------------------------------------------------------
 if [[ $SKIP_GENERATE -eq 0 ]]; then
   echo "==> Generating spec for: $PROMPT"
-  node generate_spec.js --prompt "$PROMPT" --out "$SPEC_FILE"
+  GENERATE_ARGS=(--prompt "$PROMPT" --out "$SPEC_FILE")
+  [[ -n "$MODEL" ]] && GENERATE_ARGS+=(--model "$MODEL")
+  [[ -n "$FRAMES" ]] && GENERATE_ARGS+=(--frames "$FRAMES")
+  [[ -n "$SCENES" ]] && GENERATE_ARGS+=(--scenes "$SCENES")
+  node generate_spec.js "${GENERATE_ARGS[@]}"
 else
   echo "==> Skipping generation, using $SPEC_FILE"
 fi
