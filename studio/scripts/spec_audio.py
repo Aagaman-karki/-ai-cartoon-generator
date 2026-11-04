@@ -98,6 +98,28 @@ def impact() -> np.ndarray:
     return sfx.normalize(0.9 * sfx.normalize(thump) + 0.35 * air)
 
 
+def riser() -> np.ndarray:
+    """Tension climbing: swept noise and a rising tone, cut dead at the top."""
+    total = 2.8
+    n = int(total * OUT_RATE)
+    climb = np.linspace(0.0, 1.0, n) ** 2.2
+    air = sfx.normalize(sfx.bandpass(sfx.white(n), 400, 9_000, 2)) * climb
+    tone = sfx.sweep(160, 620, n) * (0.30 * climb)
+    return sfx.normalize(air + tone)
+
+
+def heartbeat() -> np.ndarray:
+    """Two low thumps and a quieter echo — fear under the frame."""
+    total = 1.8
+    n = int(total * OUT_RATE)
+    out = np.zeros(n)
+    for start, gain in ((0.0, 1.0), (0.27, 0.62), (0.95, 0.80), (1.22, 0.50)):
+        i = int(start * OUT_RATE)
+        m = n - i
+        out[i:] += gain * sfx.sweep(58, 40, m) * sfx.env_decay(m, 0.004, 0.11)
+    return sfx.normalize(out)
+
+
 def shimmer() -> np.ndarray:
     """High, glassy confirmation for a resolution beat."""
     total = 2.0
@@ -110,9 +132,15 @@ def shimmer() -> np.ndarray:
     return sfx.normalize(tone)
 
 
-# `scenes[].sfx` tags are free-form, so unknown tags warn instead of failing the build.
+# `scenes[].sfx` tags are free-form, so unknown tags warn instead of failing the build. The generator
+# prompt (`SFX` list in generate_spec.js) offers ambience, clock_tick, pop, sub_drop, riser,
+# glass_crack, rumble, alarm, whoosh and heartbeat — every one of those must resolve here.
 STINGS = {
     "pop": (sfx.pop, 0.85),
+    "clock_tick": (sfx.ticks, 0.55),
+    "glass_crack": (sfx.crack, 0.85),
+    "riser": (riser, 0.60),
+    "heartbeat": (heartbeat, 0.80),
     "release": (sfx.release, 0.90),
     "sub_drop": (sfx.release, 0.85),
     "crack": (sfx.crack, 0.85),
