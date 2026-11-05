@@ -242,16 +242,21 @@ export const Character: React.FC<CharacterProps> = ({
   const face = FACES[expression];
 
   const panicked = action === 'panicked';
-  const pose = spring({
-    frame: frame - actionStart,
-    fps,
-    config: { damping: 12, stiffness: 120, mass: 0.7 },
-  });
+  // `pose` is the blend *into* the panic pose, so it only advances when the character is actually
+  // panicked. Springing it unconditionally made every idle character raise its arms about half a
+  // second into a scene, wherever `actionStart` defaulted to 0.
+  const pose = panicked
+    ? spring({
+        frame: frame - actionStart,
+        fps,
+        config: { damping: 12, stiffness: 120, mass: 0.7 },
+      })
+    : 0;
 
-  // Breathing plus a nervous jitter while panicked.
+  // Breathing is always on (it is the idle tell); the jitter and sway are panic only.
   const breath = Math.sin(frame * 0.06);
   const jitter = panicked ? Math.sin(frame * 0.9) * 2.5 * pose : 0;
-  const bodyY = breath * 1.5 * pose + jitter * 0.4;
+  const bodyY = breath * 1.5 + jitter * 0.4;
 
   // Arms: rest just outside the torso, throw up and out when panicked. A positive rotation on the
   // left arm swings it away from the body (SVG rotations are clockwise), so the idle angle is positive
