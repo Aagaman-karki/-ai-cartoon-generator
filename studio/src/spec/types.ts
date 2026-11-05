@@ -25,8 +25,25 @@ export type Theme = {
   fontFamily?: string;
 };
 
-export type CharacterAction = 'idle' | 'panicked';
-export type CharacterExpression = 'neutral' | 'shocked' | 'happy';
+/**
+ * Poses and faces `Character` can hold. The arrays are the single source of truth: the union types
+ * derive from them, the validator checks against them and `Character`'s face table is typed by the
+ * union, so a new value cannot be added in one place and forgotten in another.
+ */
+export const CHARACTER_ACTIONS = ['idle', 'panicked'] as const;
+export type CharacterAction = (typeof CHARACTER_ACTIONS)[number];
+
+export const CHARACTER_EXPRESSIONS = [
+  'neutral',
+  'shocked',
+  'happy',
+  'confused',
+  'worried',
+  'angry',
+  'curious',
+  'excited',
+] as const;
+export type CharacterExpression = (typeof CHARACTER_EXPRESSIONS)[number];
 
 /** Built-in background environments. Each maps to one factory component. */
 export type BackgroundType =

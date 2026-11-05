@@ -116,7 +116,7 @@ No system fonts are needed — the studio bundles its own (see `studio/src/fonts
 | `studio/package.json` | Manifest | Remotion/React dependencies and the `dev`/`render`/`render:reference`/`validate`/`still`/`typecheck` scripts. |
 | `studio/tsconfig.json` | Config | `react-jsx`, strict, bundler resolution; scoped to `studio/src`. |
 | `studio/src/index.ts` | Entry | `registerRoot(RemotionRoot)`; also imports the font registration. |
-| `studio/src/Root.tsx` | Composition | Registers `WhatIfMoon`, one `Spec-<slug>` per registered spec, and `Spec-External` (any spec passed with `--props`, validated in `calculateMetadata`). |
+| `studio/src/Root.tsx` | Composition | Registers `WhatIfMoon`, `Expression-Test` (the character contact sheet), one `Spec-<slug>` per registered spec, and `Spec-External` (any spec passed with `--props`, validated in `calculateMetadata`). |
 | `studio/scripts/validate-render.mjs` | Script | Bundles the studio, evaluates every composition's props and renders two stills each — the `npm run validate` smoke test. |
 | `studio/scripts/render.mjs` | Script | What `npm run render` runs: resolves `animation_spec.json` from the repo root, checks it, and renders it through `Spec-External`. Falls back to the reference cut only when the default path is absent. |
 | `studio/src/MainSequence.tsx` | Timeline | Lays the four scenes out as sequential 400-frame `<Sequence>` blocks and dips each chapter in/out of black. |
@@ -223,14 +223,24 @@ inventing its own look:
 A single inline `<svg>` on a 160×320 base box — semi-chibi proportions, black hoodie with drawstrings
 and kangaroo pocket, slate cargo pants, chunky white sneakers, spiked black hair — positioned by its
 **feet** (`x`, `y`), scaled by `scale`, and animated from the frame number (breathing, a blink every
-72 frames, springed arm poses, panicked jitter):
+72 frames, springed arm poses, panicked jitter).
+
+Faces are a typed table (`FACES` in `Character.tsx`), one entry per expression, and every expression
+changes at least two of brows, eyes and mouth so it still reads at the small scales a scene uses.
+`Expression-Test` renders all eight side by side at 1.15× and at 0.42× — that composition is the
+review surface for this component, not a scene:
+
+```bash
+cd studio && npx remotion still Expression-Test out/faces.png
+npx remotion still Expression-Test out/panic.png --frame=24 --props='{"action":"panicked"}'
+```
 
 | Prop | Type | Default | Effect |
 | :--- | :--- | :--- | :--- |
 | `x`, `y` | `number` | required | Center/feet position in composition pixels. |
 | `scale` | `number` | `1` | Uniform scale about the feet. |
 | `action` | `'idle' \| 'panicked'` | `'idle'` | `panicked` springs both arms up from the shoulders and adds a ±2.5 px jitter. |
-| `expression` | `'neutral' \| 'shocked' \| 'happy'` | `'neutral'` | `shocked` gives wide white eyes, raised brows and an open mouth; `happy` a broad smile. |
+| `expression` | `'neutral' \| 'shocked' \| 'happy' \| 'confused' \| 'worried' \| 'angry' \| 'curious' \| 'excited'` | `'neutral'` | Brows, eyes and mouth per face: `shocked` wide white eyes + open mouth, `happy` closed smiling eyes + broad smile, `confused` one raised brow + wavy mouth, `worried` inner-raised brows + small frown, `angry` lowered brows + heavy lids + wide frown, `curious` raised brows + small open mouth, `excited` bright eyes + open grin. |
 | `actionStart` | `number` | `0` | Frame at which the current pose began, so a mid-scene change springs instead of snapping. |
 | `flip` | `boolean` | `false` | Mirrors the figure horizontally. |
 | `shadow` | `boolean` | `true` | Draws the soft contact shadow under the feet. |

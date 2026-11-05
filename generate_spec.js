@@ -120,8 +120,11 @@ const schemaBrief = (targetFrames) => `Return ONLY a JSON object with this shape
 }
 
 Element types (coordinates are composition pixels on a 1920x1080 frame):
-- { "type": "character", "x", "y", "scale"?, "action"?: "idle"|"panicked", "expression"?: "neutral"|"shocked"|"happy", "actionStart"?, "flip"? }
+- { "type": "character", "x", "y", "scale"?, "action"?: "idle"|"panicked", "expression"?: "neutral"|"shocked"|"happy"|"confused"|"worried"|"angry"|"curious"|"excited", "actionStart"?, "flip"? }
   "y" is the FEET position. Figures are ~320px tall before "scale".
+  Pick the face that matches the beat: shocked = the fact lands, confused = it does not add up,
+  worried = dread, angry = refusing the premise, curious = leaning in, excited = about to explain,
+  happy = pleased, neutral = calm narration.
 - { "type": "text_overlay", "text", "x", "y", "eyebrow"?, "sub"?, "size"?: "hero"|"header"|"sub", "align"?, "animation"?: "spring_pop"|"fade"|"slide_up", "delay"? }
 - { "type": "hud_chip", "label", "value", "x", "y", "tone"?: "gold"|"alert", "align"?, "delay"? }
 - { "type": "fracture", "path": "M..L..", "strokeWidth"?, "delay"?, "revealFrames"? }

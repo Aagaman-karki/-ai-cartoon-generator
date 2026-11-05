@@ -2,8 +2,8 @@ import {
   AnimationSpec,
   BackgroundType,
   CameraMove,
-  CharacterAction,
-  CharacterExpression,
+  CHARACTER_ACTIONS,
+  CHARACTER_EXPRESSIONS,
   COMPOSITION_DEFAULTS,
   SceneElement,
   SpecTiming,
@@ -26,8 +26,8 @@ const BACKGROUNDS: BackgroundType[] = [
   'open_horizon',
 ];
 const CAMERAS: CameraMove[] = ['static', 'slow_zoom_in', 'slow_zoom_out', 'pan_up', 'pan_down'];
-const ACTIONS: CharacterAction[] = ['idle', 'panicked'];
-const EXPRESSIONS: CharacterExpression[] = ['neutral', 'shocked', 'happy'];
+const ACTIONS = CHARACTER_ACTIONS;
+const EXPRESSIONS = CHARACTER_EXPRESSIONS;
 const ANIMATIONS: TextAnimation[] = ['spring_pop', 'fade', 'slide_up'];
 const BUNDLED_FONTS = ['StudioSans', 'StudioSansBold', 'StudioMono'];
 
