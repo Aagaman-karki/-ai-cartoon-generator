@@ -26,7 +26,7 @@ export type Theme = {
 };
 
 export type CharacterAction = 'idle' | 'panicked';
-export type CharacterExpression = 'neutral' | 'shocked' | 'happy';
+export type CharacterExpression = 'neutral' | 'shocked' | 'happy' | 'confused' | 'worried' | 'angry' | 'curious' | 'excited';
 
 /** Built-in background environments. Each maps to one factory component. */
 export type BackgroundType =

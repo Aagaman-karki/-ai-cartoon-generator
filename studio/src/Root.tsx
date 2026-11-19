@@ -1,6 +1,7 @@
 import React from 'react';
 import { Composition } from 'remotion';
 import { MainSequence } from './MainSequence';
+import { ExpressionTest } from './ExpressionTest';
 import { SpecMovie } from './spec/SpecMovie';
 import { SPECS } from './specs';
 import { AnimationSpec } from './spec/types';
@@ -78,7 +79,15 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         durationInFrames={1600}
       />
-      {SPECS.map(({ spec, timing }) => (
+      <Composition
+                id='Expression-Test'
+                component={ExpressionTest}
+                width={1920}
+                height={1080}
+                fps={30}
+                durationInFrames={120}
+            />
+            {SPECS.map(({ spec, timing }) => (
         <Composition
           key={spec.slug}
           id={`Spec-${spec.slug}`}

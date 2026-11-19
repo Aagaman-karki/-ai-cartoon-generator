@@ -16,7 +16,7 @@ import { PALETTE } from './theme';
  */
 
 export type CharacterAction = 'idle' | 'panicked';
-export type CharacterExpression = 'neutral' | 'shocked' | 'happy';
+export type CharacterExpression = 'neutral' | 'shocked' | 'happy' | 'confused' | 'worried' | 'angry' | 'curious' | 'excited';
 
 export type CharacterProps = {
   /** Horizontal position of the character's center, in composition pixels. */
@@ -60,20 +60,21 @@ export const Character: React.FC<CharacterProps> = ({
   flip = false,
   shadow = true,
 }) => {
+  const gradientId = React.useId().replace(/:/g, '');
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   const panicked = action === 'panicked';
-  const pose = spring({
+  const pose = panicked ? spring({
     frame: frame - actionStart,
     fps,
     config: { damping: 12, stiffness: 120, mass: 0.7 },
-  });
+  }) : 0;
 
   // Breathing plus a nervous jitter while panicked.
   const breath = Math.sin(frame * 0.06);
   const jitter = panicked ? Math.sin(frame * 0.9) * 2.5 * pose : 0;
-  const bodyY = breath * 1.5 * pose + jitter * 0.4;
+  const bodyY = breath * 1.5 + jitter * 0.4;
 
   // Arms: rest at a relaxed outward angle, throw up and out when panicked.
   const swing = Math.sin(frame * 0.55) * 5 * pose;
@@ -87,7 +88,19 @@ export const Character: React.FC<CharacterProps> = ({
   const blink = blinkPhase > 66 ? 1 - Math.abs(blinkPhase - 69) / 3 : 0;
 
   const headTilt = Math.sin(frame * 0.045) * 1.2 + (panicked ? Math.sin(frame * 0.7) * 2 * pose : 0);
-  const browLift = expression === 'shocked' ? -6 : expression === 'happy' ? -2 : 0;
+  const browLeft = expression === 'angry' ? [76, 84]
+    : expression === 'worried' ? [74, 80]
+    : expression === 'confused' ? [73, 79]
+    : expression === 'curious' ? [74, 78]
+    : expression === 'excited' || expression === 'shocked' ? [76, 73]
+    : expression === 'happy' ? [80, 77] : [82, 79];
+
+const browRight = expression === 'angry' ? [84, 76]
+    : expression === 'worried' ? [80, 74]
+    : expression === 'confused' ? [79, 82]
+    : expression === 'curious' ? [79, 73]
+    : expression === 'excited' || expression === 'shocked' ? [73, 76]
+    : expression === 'happy' ? [77, 80] : [79, 82];
 
   return (
     <div
@@ -104,27 +117,27 @@ export const Character: React.FC<CharacterProps> = ({
     >
       <svg width="160" height="320" viewBox="0 0 160 320" style={{ overflow: 'visible' }}>
         <defs>
-          <radialGradient id="character-ground" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`character-ground-${gradientId}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={PALETTE.ink} stopOpacity="0.55" />
             <stop offset="100%" stopColor={PALETTE.ink} stopOpacity="0" />
           </radialGradient>
-          <linearGradient id="character-hoodie" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={`character-hoodie-${gradientId}`} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor={HOODIE_LIGHT} />
             <stop offset="45%" stopColor={HOODIE} />
             <stop offset="100%" stopColor={HOODIE_SHADE} />
           </linearGradient>
-          <linearGradient id="character-pants" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`character-pants-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={PANTS} />
             <stop offset="100%" stopColor={PANTS_SHADE} />
           </linearGradient>
         </defs>
 
-        {shadow ? <ellipse cx={80} cy={313} rx={52} ry={11} fill="url(#character-ground)" /> : null}
+        {shadow ? <ellipse cx={80} cy={313} rx={52} ry={11} fill={`url(#character-ground-${gradientId})`} /> : null}
 
         <g transform={`translate(0 ${bodyY}) rotate(${headTilt * 0.25} 80 300)`}>
           {/* Legs */}
-          <rect x={56} y={238} width={25} height={68} rx={10} fill="url(#character-pants)" stroke={OUTLINE} strokeWidth={2.5} />
-          <rect x={79} y={238} width={25} height={68} rx={10} fill="url(#character-pants)" stroke={OUTLINE} strokeWidth={2.5} />
+          <rect x={56} y={238} width={25} height={68} rx={10} fill={`url(#character-pants-${gradientId})`} stroke={OUTLINE} strokeWidth={2.5} />
+          <rect x={79} y={238} width={25} height={68} rx={10} fill={`url(#character-pants-${gradientId})`} stroke={OUTLINE} strokeWidth={2.5} />
           {/* Cargo pocket */}
           <rect x={80} y={256} width={23} height={19} rx={4} fill={PANTS_SHADE} stroke={OUTLINE} strokeWidth={2} />
           <line x1={80} y1={262} x2={103} y2={262} stroke={OUTLINE} strokeWidth={1.5} opacity={0.6} />
@@ -144,7 +157,7 @@ export const Character: React.FC<CharacterProps> = ({
           {/* Torso: hoodie */}
           <path
             d="M46 156 q0 -18 16 -24 q18 10 36 0 q18 6 18 24 v74 q0 14 -14 14 h-42 q-14 0 -14 -14 z"
-            fill="url(#character-hoodie)"
+            fill={`url(#character-hoodie-${gradientId})`}
             stroke={OUTLINE}
             strokeWidth={2.5}
           />
@@ -176,51 +189,55 @@ export const Character: React.FC<CharacterProps> = ({
           {/* Head */}
           <g transform={`rotate(${headTilt} 80 150)`}>
             <circle cx={80} cy={92} r={40} fill={SKIN} stroke={OUTLINE} strokeWidth={3} />
-            {/* Spiky hair mass */}
-            <path
-              d="M40 104 L44 60 L54 80 L58 34 L70 66 L80 22 L90 64 L102 32 L108 74 L118 54 L122 104
-                 C114 82 102 76 86 78 C68 80 52 88 40 104 Z"
-              fill={HAIR}
-              stroke={OUTLINE}
-              strokeWidth={2.5}
-              strokeLinejoin="round"
-            />
             {/* Brows */}
-            <line x1={58} y1={82 + browLift} x2={72} y2={79 + browLift} stroke={HAIR} strokeWidth={3.4} strokeLinecap="round" />
-            <line x1={88} y1={79 + browLift} x2={102} y2={82 + browLift} stroke={HAIR} strokeWidth={3.4} strokeLinecap="round" />
+            <line x1={58} y1={browLeft[0]} x2={72} y2={browLeft[1]} stroke={HAIR} strokeWidth={3.4} strokeLinecap="round" />
+            <line x1={88} y1={browRight[0]} x2={102} y2={browRight[1]} stroke={HAIR} strokeWidth={3.4} strokeLinecap="round" />
 
             {/* Eyes: solid ovals when calm, wide and white when shocked */}
             <g transform={`translate(0 ${EYE.y}) scale(1 ${1 - blink * 0.92}) translate(0 ${-EYE.y})`}>
-              {expression === 'shocked' ? (
+              {expression === 'shocked' || expression === 'excited' ? (
                 <>
-                  <circle cx={EYE.left} cy={EYE.y} r={11} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} />
-                  <circle cx={EYE.right} cy={EYE.y} r={11} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} />
-                  <circle cx={EYE.left + 1} cy={EYE.y + 1} r={4.2} fill={HAIR} />
-                  <circle cx={EYE.right + 1} cy={EYE.y + 1} r={4.2} fill={HAIR} />
+                    <circle cx={EYE.left} cy={EYE.y} r={11} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} />
+                    <circle cx={EYE.right} cy={EYE.y} r={11} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} />
+                    <circle cx={EYE.left + 1} cy={EYE.y + 1} r={4.2} fill={HAIR} />
+                    <circle cx={EYE.right + 1} cy={EYE.y + 1} r={4.2} fill={HAIR} />
                 </>
-              ) : (
+            ) : expression === 'worried' ? (
                 <>
-                  <ellipse cx={EYE.left} cy={EYE.y} rx={5.6} ry={8.4} fill={HAIR} />
-                  <ellipse cx={EYE.right} cy={EYE.y} rx={5.6} ry={8.4} fill={HAIR} />
-                  <circle cx={EYE.left + 2} cy={EYE.y - 3} r={1.6} fill={PALETTE.white} opacity={0.85} />
-                  <circle cx={EYE.right + 2} cy={EYE.y - 3} r={1.6} fill={PALETTE.white} opacity={0.85} />
+                    <ellipse cx={EYE.left} cy={EYE.y} rx={7} ry={10} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={1.5} />
+                    <ellipse cx={EYE.right} cy={EYE.y} rx={7} ry={10} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={1.5} />
+                    <circle cx={EYE.left + 1} cy={EYE.y + 2} r={3.8} fill={HAIR} />
+                    <circle cx={EYE.right + 1} cy={EYE.y + 2} r={3.8} fill={HAIR} />
                 </>
-              )}
-            </g>
+            ) : (
+                <>
+                    <ellipse cx={EYE.left} cy={EYE.y} rx={5.6} ry={expression === 'angry' ? 5 : expression === 'confused' ? 7 : 8.4} fill={HAIR} />
+                    <ellipse cx={EYE.right} cy={EYE.y} rx={5.6} ry={expression === 'angry' ? 5 : 8.4} fill={HAIR} />
+                    <circle cx={EYE.left + (expression === 'curious' ? 3 : expression === 'confused' ? -1 : 2)} cy={EYE.y - 3} r={1.6} fill={PALETTE.white} opacity={0.85} />
+                    <circle cx={EYE.right + (expression === 'curious' ? 3 : 2)} cy={EYE.y - 3} r={1.6} fill={PALETTE.white} opacity={0.85} />
+                </>
+            )}
+        </g>
 
             {/* Cheek warmth */}
             <ellipse cx={56} cy={108} rx={7} ry={4.5} fill={PALETTE.ember} opacity={0.22} />
             <ellipse cx={104} cy={108} rx={7} ry={4.5} fill={PALETTE.ember} opacity={0.22} />
 
             {/* Mouth */}
-            {expression === 'shocked' ? (
-              <ellipse cx={80} cy={116} rx={7.5} ry={9} fill="#3A1E2B" stroke={OUTLINE} strokeWidth={2} />
-            ) : expression === 'happy' ? (
-              <path d="M66 112 q14 16 28 0 q-14 8 -28 0 z" fill="#3A1E2B" stroke={OUTLINE} strokeWidth={2} strokeLinejoin="round" />
-            ) : (
-              <path d="M72 113 q8 7 16 0" stroke={OUTLINE} strokeWidth={2.6} fill="none" strokeLinecap="round" />
-            )}
-          </g>
+        {expression === 'shocked' || expression === 'curious' ? (
+            <ellipse cx={80} cy={116} rx={expression === 'shocked' ? 7.5 : 5} ry={expression === 'shocked' ? 9 : 5.5} fill="#3A1E2B" stroke={OUTLINE} strokeWidth={2} />
+        ) : expression === 'happy' || expression === 'excited' ? (
+            <path d="M66 112 q14 16 28 0 q-14 8 -28 0 z" fill="#3A1E2B" stroke={OUTLINE} strokeWidth={2.6} strokeLinejoin="round" />
+        ) : expression === 'worried' ? (
+            <path d="M71 118 q9 -9 18 0" stroke={OUTLINE} strokeWidth={2.6} fill="none" strokeLinecap="round" />
+        ) : expression === 'angry' ? (
+            <path d="M71 117 q9 -5 18 0" stroke={OUTLINE} strokeWidth={2.8} fill="none" strokeLinecap="round" />
+        ) : expression === 'confused' ? (
+            <path d="M72 115 q5 -5 9 0 q4 4 7 -1" stroke={OUTLINE} strokeWidth={2.6} fill="none" strokeLinecap="round" />
+        ) : (
+            <path d="M72 113 q8 7 16 0" stroke={OUTLINE} strokeWidth={2.6} fill="none" strokeLinecap="round" />
+        )}
+        </g>
         </g>
       </svg>
     </div>

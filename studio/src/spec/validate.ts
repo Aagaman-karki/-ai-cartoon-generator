@@ -27,7 +27,7 @@ const BACKGROUNDS: BackgroundType[] = [
 ];
 const CAMERAS: CameraMove[] = ['static', 'slow_zoom_in', 'slow_zoom_out', 'pan_up', 'pan_down'];
 const ACTIONS: CharacterAction[] = ['idle', 'panicked'];
-const EXPRESSIONS: CharacterExpression[] = ['neutral', 'shocked', 'happy'];
+const EXPRESSIONS: CharacterExpression[] = ['neutral', 'shocked', 'happy', 'confused', 'worried', 'angry', 'curious', 'excited'];
 const ANIMATIONS: TextAnimation[] = ['spring_pop', 'fade', 'slide_up'];
 const BUNDLED_FONTS = ['StudioSans', 'StudioSansBold', 'StudioMono'];
 
