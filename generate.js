@@ -25,6 +25,34 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+/**
+ * Node does not read `.env` on its own, so a key pasted there would be invisible to `process.env`.
+ * Load `<repo>/.env` (next to this script, so the cwd does not matter) without overriding anything
+ * already exported. Real environment variables always win; a blank export counts as unset.
+ */
+function loadDotEnv() {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
+  } catch {
+    return;
+  }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+    const key = line.slice(0, eq).trim().replace(/^export\s+/, '');
+    let value = line.slice(eq + 1).trim();
+    if (value.length > 1 && (value[0] === '"' || value[0] === "'") && value.endsWith(value[0])) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+loadDotEnv();
+
 const API_HOST = 'https://generativelanguage.googleapis.com';
 /** Both versions serve `generateContent`; v1beta is where new models land first. */
 const API_VERSIONS = new Set(['v1beta', 'v1']);
@@ -61,7 +89,10 @@ const USAGE = `Usage: node generate.js [options]
   --dry-run            print the request without sending it
   -h, --help           show this help
 
-Key: GEMINI_API_KEY, GOOGLE_GENERATIVE_API_KEY or GOOGLE_API_KEY.`;
+Key: GEMINI_API_KEY, GOOGLE_GENERATIVE_API_KEY or GOOGLE_API_KEY, exported or in the repo-root
+.env (see .env.example), which this script loads automatically.`;
+
+const NO_KEY_HINT = `No API key found. Put GEMINI_API_KEY (or GOOGLE_GENERATIVE_API_KEY / GOOGLE_API_KEY) in ${path.join(__dirname, '.env')}, or export it`;
 
 /**
  * Model ids reach here pasted from docs, dashboards and error messages as `models/x`, `v1beta/models/x`
@@ -291,7 +322,7 @@ async function main() {
   const apiKey = resolveKey();
 
   if (args.listModels) {
-    if (!apiKey) fail('No API key found. Set GEMINI_API_KEY (or GOOGLE_GENERATIVE_API_KEY / GOOGLE_API_KEY).');
+    if (!apiKey) fail(NO_KEY_HINT);
     return listModels(apiKey, args.apiVersion);
   }
 
@@ -314,7 +345,7 @@ async function main() {
     return;
   }
 
-  if (!apiKey) fail('No API key found. Set GEMINI_API_KEY (or GOOGLE_GENERATIVE_API_KEY / GOOGLE_API_KEY), or use --dry-run.');
+  if (!apiKey) fail(`${NO_KEY_HINT}, or use --dry-run.`);
   log(`Generating with up to ${candidates.length} model(s), ${MAX_ATTEMPTS} attempts each, ${Math.round(args.timeoutMs / 1000)}s timeout…`);
 
   let result;

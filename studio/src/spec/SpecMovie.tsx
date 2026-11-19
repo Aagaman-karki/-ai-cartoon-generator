@@ -3,16 +3,20 @@ import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion';
 import { ChapterFade } from '../ChapterFade';
 import { SANS_BOLD } from '../fonts';
 import { PALETTE, fadeIn, fadeOut } from '../theme';
+import { SpecAudio, specAudioFor } from './SpecAudio';
 import { UniversalScene } from './UniversalScene';
 import { AnimationSpec, NarrationCue } from './types';
 import { timingFor } from './validate';
 
 /**
  * Turns an `AnimationSpec` into a Remotion timeline: one `<Sequence>` per scene, each wrapped in a
- * chapter dip, plus optional burned-in narration.
+ * chapter dip, optional burned-in narration, and the soundtrack generated for this slug by
+ * `scripts/spec_audio.py` (voiceover per cue, ambience bed, per-scene stings).
  *
  * The component is deliberately dumb — all timing comes from `timingFor(spec)`, so the composition's
- * `durationInFrames` and the scene starts can never disagree with the spec.
+ * `durationInFrames` and the scene starts can never disagree with the spec. Audio placement is read
+ * from the generated manifest rather than measured here, so a spec with no scored audio renders
+ * silently instead of failing.
  */
 
 export type SpecMovieProps = { spec: AnimationSpec };
@@ -47,9 +51,12 @@ const Caption: React.FC<{ cue: NarrationCue; durationInFrames: number }> = ({ cu
 export const SpecMovie: React.FC<SpecMovieProps> = ({ spec }) => {
   const timing = timingFor(spec);
   const cues = spec.narration ?? [];
+  const audio = specAudioFor(spec.slug);
 
   return (
     <>
+      {audio ? <SpecAudio audio={audio} /> : null}
+
       {spec.scenes.map((scene, index) => (
         <Sequence key={scene.id} from={timing.sceneStarts[index]} durationInFrames={scene.durationFrames}>
           <ChapterFade durationInFrames={scene.durationFrames}>

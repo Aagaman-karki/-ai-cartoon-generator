@@ -14,7 +14,10 @@
  * Defaults: 14,400 frames (8:00 at 30fps) across 12-16 scenes, with narration and SFX cues spread
  * over the whole timeline.
  *
- * Requires Node 18+ (global fetch) and GOOGLE_GENERATIVE_API_KEY for a real call.
+ * Requires Node 18+ (global fetch) for a real call, plus one model key:
+ *   RESPAN_API_KEY             — sends the call through the Respan gateway's Gemini proxy, where every
+ *                                generation is logged as a trace (https://platform.respan.ai).
+ *   GOOGLE_GENERATIVE_API_KEY  — direct to Google, used only when RESPAN_API_KEY is empty.
  *
  * Note: this validates structure only, enough to fail fast with a readable message. The authoritative
  * schema check is `validateSpec` in studio/src/spec/validate.ts, which runs whenever the studio
@@ -24,9 +27,65 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+/**
+ * Node does not read `.env` on its own, so a key copied there would be invisible to `process.env`.
+ * Load `<repo>/.env` (next to this script, so the cwd does not matter) without overriding anything
+ * already exported. Real environment variables always win; a blank export counts as unset.
+ */
+function loadDotEnv() {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
+  } catch {
+    return;
+  }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+    const key = line.slice(0, eq).trim().replace(/^export\s+/, '');
+    let value = line.slice(eq + 1).trim();
+    if (value.length > 1 && (value[0] === '"' || value[0] === "'") && value.endsWith(value[0])) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+loadDotEnv();
+
 const DEFAULT_MODEL = 'gemini-3.8-flash';
 const DEFAULT_TARGET_FRAMES = 14400;
 const DEFAULT_SCENE_RANGE = [12, 16];
+
+/**
+ * Where the generateContent call goes. The Respan gateway exposes a Gemini SDK proxy at
+ * `<api>/google/gemini`, so the request body and the response shape are identical on both routes —
+ * only the base URL and the key header change.
+ */
+const RESPAN_API_BASE = (process.env.RESPAN_BASE_URL || 'https://api.respan.ai/api').replace(/\/+$/, '');
+const GOOGLE_API_BASE = 'https://generativelanguage.googleapis.com';
+
+const resolveEndpoint = (model) => {
+  const respanKey = process.env.RESPAN_API_KEY;
+  if (respanKey) {
+    return {
+      route: 'respan-gateway',
+      // Traced by Respan: open Observability › Logs to see this generation.
+      url: `${RESPAN_API_BASE}/google/gemini/v1beta/models/${model}:generateContent`,
+      keyQuery: '',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': respanKey },
+    };
+  }
+  const googleKey = process.env.GOOGLE_GENERATIVE_API_KEY;
+  return {
+    route: 'google-direct',
+    url: `${GOOGLE_API_BASE}/v1beta/models/${model}:generateContent`,
+    keyQuery: googleKey ? `?key=${encodeURIComponent(googleKey)}` : '',
+    headers: { 'Content-Type': 'application/json' },
+  };
+};
 
 /** Compact description of the spec contract, kept in sync with studio/src/spec/types.ts. */
 const schemaBrief = (targetFrames) => `Return ONLY a JSON object with this shape:
@@ -294,23 +353,29 @@ async function main() {
   const request = buildRequest(args.prompt, args.targetFrames, args.sceneRange);
 
   if (args.dryRun) {
-    console.log(JSON.stringify({ url: `https://generativelanguage.googleapis.com/v1beta/models/${args.model}:generateContent`, out, target, request }, null, 2));
+    const endpoint = resolveEndpoint(args.model);
+    console.log(JSON.stringify({ route: endpoint.route, url: endpoint.url, out, target, request }, null, 2));
     return;
   }
 
-  const apiKey = process.env.GOOGLE_GENERATIVE_API_KEY;
-  if (!apiKey) {
-    console.error('GOOGLE_GENERATIVE_API_KEY is not set — export it, or use --dry-run to inspect the request.');
+  const endpoint = resolveEndpoint(args.model);
+  if (endpoint.route === 'google-direct' && !process.env.GOOGLE_GENERATIVE_API_KEY) {
+    console.error(
+      'No model key is set — export RESPAN_API_KEY (Respan gateway, traced) or GOOGLE_GENERATIVE_API_KEY\n' +
+        `(direct Google), or put one in ${path.join(__dirname, '.env')} (copy .env.example).\n` +
+        'Use --dry-run to inspect the request without a key.',
+    );
     process.exit(1);
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${args.model}:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) },
-  );
+  const response = await fetch(`${endpoint.url}${endpoint.keyQuery}`, {
+    method: 'POST',
+    headers: endpoint.headers,
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
-    console.error(`Gemini request failed: HTTP ${response.status} ${await response.text()}`);
+    console.error(`${endpoint.route} request failed: HTTP ${response.status} ${await response.text()}`);
     process.exit(1);
   }
 
@@ -341,7 +406,7 @@ async function main() {
   const totalFrames = spec.scenes.reduce((sum, scene) => sum + scene.durationFrames, 0);
   const sfxCount = spec.scenes.reduce((sum, scene) => sum + (Array.isArray(scene.sfx) ? scene.sfx.length : 0), 0);
 
-  console.log(`Wrote ${out}`);
+  console.log(`Wrote ${out} (route: ${endpoint.route})`);
   console.log(
     `  "${spec.title}" — ${spec.scenes.length} scenes, ${totalFrames} frames (${(totalFrames / (spec.fps ?? 30)).toFixed(1)}s), ` +
       `${spec.narration.length} narration cues, ${sfxCount} sfx cues`,

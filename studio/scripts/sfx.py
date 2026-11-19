@@ -99,6 +99,12 @@ def fade_edges(sig: np.ndarray, fade_in: float = 0.01, fade_out: float = 0.01) -
     out = sig.copy()
     a = max(int(fade_in * SR), 1)
     b = max(int(fade_out * SR), 1)
+    n = out.shape[0]
+    # A clip shorter than its fades (a 3-second cut gets a 2.4 s fade-out) has to scale them down
+    # instead of multiplying by a longer window, which broadcasts to a ValueError.
+    if n and a + b > n:
+        scale = n / (a + b)
+        a, b = max(int(a * scale), 1), max(int(b * scale), 1)
     out[:a] *= np.linspace(0, 1, a)
     out[-b:] *= np.linspace(1, 0, b)
     return out
