@@ -1,7 +1,7 @@
 import React from 'react';
 import { Composition } from 'remotion';
-import { MainSequence } from './MainSequence';
 import { ExpressionTest } from './ExpressionTest';
+import { MainSequence } from './MainSequence';
 import { SpecMovie } from './spec/SpecMovie';
 import { SPECS } from './specs';
 import { AnimationSpec } from './spec/types';
@@ -10,9 +10,11 @@ import { timingFor, validateSpec } from './spec/validate';
 /**
  * Remotion root: registers every renderable composition.
  *
- * Three kinds live here:
+ * Four kinds live here:
  *
  * * `WhatIfMoon` — the hand-authored episode, built from the scene components in `src/`.
+ * * `Expression-Test` — the character contact sheet: all eight faces at working scale and at small
+ *   scale, so the drawing can be reviewed as pixels rather than as code.
  * * `Spec-<slug>` — one composition per `AnimationSpec` in `src/specs/`. These are generated from
  *   JSON (by a model or by hand) and rendered by the factory components, so a new episode needs no
  *   new React code. Timing comes from `timingFor(spec)`, never from a constant.
@@ -80,14 +82,15 @@ export const RemotionRoot: React.FC = () => {
         durationInFrames={1600}
       />
       <Composition
-                id='Expression-Test'
-                component={ExpressionTest}
-                width={1920}
-                height={1080}
-                fps={30}
-                durationInFrames={120}
-            />
-            {SPECS.map(({ spec, timing }) => (
+        id='Expression-Test'
+        component={ExpressionTest}
+        defaultProps={{ action: 'idle', flip: false, shadow: true }}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={120}
+      />
+      {SPECS.map(({ spec, timing }) => (
         <Composition
           key={spec.slug}
           id={`Spec-${spec.slug}`}

@@ -11,6 +11,7 @@ Build the docs and the pipeline around those facts.
 | Stage | Location | What it does |
 | :--- | :--- | :--- |
 | 1. Schema | `studio/src/spec/types.ts`, `studio/src/spec/validate.ts` | The contract: `AnimationSpec`, and a validator that turns untrusted model output into a typed spec plus derived timing. |
+| 2. Character | `studio/src/Character.tsx`, `studio/src/ExpressionTest.tsx` | The figure and its eight faces; `Expression-Test` is the contact-sheet composition used to review them. |
 | 2. Factory | `studio/src/spec/UniversalScene.tsx`, `studio/src/spec/backgrounds.tsx`, `studio/src/Atmosphere.tsx`, `studio/src/Character.tsx` | Declarative elements and environments → React. `BACKGROUNDS` is the environment registry; `ElementView` is the element registry. |
 | 2b. Timeline | `studio/src/spec/SpecMovie.tsx`, `studio/src/ChapterFade.tsx` | One `<Sequence>` per scene, chapter dips, optional burned-in narration. |
 | 2c. Audio | `studio/src/EpisodeAudio.tsx`, `studio/src/spec/SpecAudio.tsx`, `studio/scripts/tts.py`, `studio/scripts/sfx.py`, `studio/scripts/spec_audio.py` | Voiceover (Kokoro neural TTS) and a synthesised SFX bed, placed on the timeline by frame. The hand-authored cut is mixed by hand in `EpisodeAudio`; a spec-driven cut is scored by `spec_audio.py` into `src/spec/audio/manifest.json`, which `SpecAudio` plays. |
@@ -69,6 +70,13 @@ Adding an element type is a three-file change — keep them in sync:
 Adding a background is two files: `studio/src/spec/backgrounds.tsx` (component + `BACKGROUNDS` entry)
 and `BackgroundType` in `types.ts`, plus the enum in `generate_spec.js` (`BACKGROUNDS`). Prefer building
 new environments from `Sky`, `Ridge`, `CityLine`, `Particles` and `Vignette` rather than new gradients.
+
+Adding a character expression is also two: the value in `CHARACTER_EXPRESSIONS` (`spec/types.ts`, which
+the validator and the generator prompt both read) and a face in `FACES` (`Character.tsx`, typed as
+`Record<CharacterExpression, Face>`, so the typecheck fails until the face exists). Then render
+`Expression-Test` at frame 0 and look at it — 1.15× and 0.42× are on the same sheet, and an expression
+that only reads at poster size is not finished. Pass `--props='{"action":"panicked"}'` at a frame past
+the spring (≈24) to see the face on a moving body.
 
 ## Audio
 
