@@ -376,15 +376,6 @@ export const Character: React.FC<CharacterProps> = ({
           {/* Head */}
           <g transform={`rotate(${headTilt} 80 150)`}>
             <circle cx={80} cy={92} r={40} fill={SKIN} stroke={OUTLINE} strokeWidth={3} />
-            {/* Spiky hair mass */}
-            <path
-              d="M40 104 L44 60 L54 80 L58 34 L70 66 L80 22 L90 64 L102 32 L108 74 L118 54 L122 104
-                 C114 82 102 76 86 78 C68 80 52 88 40 104 Z"
-              fill={HAIR}
-              stroke={OUTLINE}
-              strokeWidth={2.5}
-              strokeLinejoin="round"
-            />
             <Brows face={face} />
 
             <Eyes face={face} blink={blink} />
