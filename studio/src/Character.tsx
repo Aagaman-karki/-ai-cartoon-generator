@@ -242,9 +242,23 @@ export const Character: React.FC<CharacterProps> = ({
   const face = FACES[expression];
 
   const panicked = action === 'panicked';
-  // `pose` is the blend *into* the panic pose, so it only advances when the character is actually
-  // panicked. Springing it unconditionally made every idle character raise its arms about half a
-  // second into a scene, wherever `actionStart` defaulted to 0.
+  const walking = action === 'walking';
+
+  // Spring the walking action in smoothly from the idle pose.
+  const walkProgress = walking
+    ? spring({
+        frame: Math.max(0, frame - actionStart),
+        fps,
+        config: { damping: 16, stiffness: 100, mass: 0.8 },
+      })
+    : 0;
+
+  const walkFrame = Math.max(0, frame - actionStart);
+  const walkCycle = Math.sin(walkFrame * 0.22) * walkProgress;
+  const walkLeg = walkCycle * 18;
+  const walkArm = walkCycle * 22;
+
+  // The panic pose keeps its existing spring and behaviour.
   const pose = panicked
     ? spring({
         frame: frame - actionStart,
@@ -253,20 +267,21 @@ export const Character: React.FC<CharacterProps> = ({
       })
     : 0;
 
-  // Breathing is always on (it is the idle tell); the jitter and sway are panic only.
   const breath = Math.sin(frame * 0.06);
   const jitter = panicked ? Math.sin(frame * 0.9) * 2.5 * pose : 0;
-  const bodyY = breath * 1.5 + jitter * 0.4;
+  const bodyY =
+    breath * 1.5 +
+    jitter * 0.4 +
+    Math.abs(Math.sin(walkFrame * 0.44)) * 2.2 * walkProgress;
 
-  // Arms: rest just outside the torso, throw up and out when panicked. A positive rotation on the
-  // left arm swings it away from the body (SVG rotations are clockwise), so the idle angle is positive
-  // on the left and negated for the right; the sign matters, and getting it backwards folds both
-  // sleeves across the chest.
+  // Arms swing opposite to the legs while walking, then blend into the panic pose.
   const swing = Math.sin(frame * 0.55) * 5 * pose;
   const idleAngle = 6 + breath * 1.5;
   const panicAngle = 148 + swing;
-  const leftArm = idleAngle + (panicAngle - idleAngle) * pose;
-  const rightArm = -leftArm;
+  const walkingLeftArm = idleAngle - walkArm;
+  const walkingRightArm = -idleAngle + walkArm;
+  const leftArm = walkingLeftArm + (panicAngle - walkingLeftArm) * pose;
+  const rightArm = walkingRightArm + (-panicAngle - walkingRightArm) * pose;
 
   // Blink every ~2.4 s (frames). The lid shuts in two frames and opens over three: a symmetric
   // triangle reads as a mechanical wiggle, and eyes really do snap closed faster than they open.
@@ -320,23 +335,30 @@ export const Character: React.FC<CharacterProps> = ({
         {shadow ? <ellipse cx={80} cy={313} rx={52} ry={11} fill={`url(#${groundId})`} /> : null}
 
         <g transform={`translate(0 ${bodyY}) rotate(${headTilt * 0.25} 80 300)`}>
-          {/* Legs */}
+          {/* Left leg and sneaker: swing forward and backward */}
+        <g transform={`rotate(${walkLeg} 68 238)`}>
           <rect x={56} y={238} width={25} height={68} rx={10} fill={`url(#${pantsId})`} stroke={OUTLINE} strokeWidth={2.5} />
-          <rect x={79} y={238} width={25} height={68} rx={10} fill={`url(#${pantsId})`} stroke={OUTLINE} strokeWidth={2.5} />
-          {/* Cargo pocket */}
-          <rect x={80} y={256} width={23} height={19} rx={4} fill={PANTS_SHADE} stroke={OUTLINE} strokeWidth={2} />
-          <line x1={80} y1={262} x2={103} y2={262} stroke={OUTLINE} strokeWidth={1.5} opacity={0.6} />
-
-          {/* Chunky white sneakers with dark soles */}
           <g stroke={OUTLINE} strokeWidth={2.6} strokeLinejoin="round">
             <path d="M48 302 q0 -8 10 -8 h20 q8 0 8 8 v6 q0 4 -4 4 h-30 q-4 0 -4 -4 z" fill={SHOE} />
-            <path d="M82 302 q0 -8 8 -8 h20 q10 0 10 8 v6 q0 4 -4 4 h-30 q-4 0 -4 -4 z" fill={SHOE} />
             <path d="M48 304 h38 v4 q0 2 -3 2 h-32 q-3 0 -3 -2 z" fill={OUTLINE} stroke="none" />
-            <path d="M82 304 h38 v4 q0 2 -3 2 h-32 q-3 0 -3 -2 z" fill={OUTLINE} stroke="none" />
-            <path d="M58 305 l7 4 M67 305 l7 4 M92 305 l7 4 M101 305 l7 4" stroke={OUTLINE} strokeWidth={1.6} fill="none" opacity={0.75} />
+            <path d="M58 305 l7 4 M67 305 l7 4" stroke={OUTLINE} strokeWidth={1.6} fill="none" opacity={0.75} />
           </g>
+        </g>
 
-          {/* Hood, behind the torso */}
+        {/* Right leg and sneaker: opposite swing */}
+        <g transform={`rotate(${-walkLeg} 92 238)`}>
+          <rect x={79} y={238} width={25} height={68} rx={10} fill={`url(#${pantsId})`} stroke={OUTLINE} strokeWidth={2.5} />
+          {/* Cargo pocket follows the right leg */}
+          <rect x={80} y={256} width={23} height={19} rx={4} fill={PANTS_SHADE} stroke={OUTLINE} strokeWidth={2} />
+          <line x1={80} y1={262} x2={103} y2={262} stroke={OUTLINE} strokeWidth={1.5} opacity={0.6} />
+          <g stroke={OUTLINE} strokeWidth={2.6} strokeLinejoin="round">
+            <path d="M82 302 q0 -8 8 -8 h20 q10 0 10 8 v6 q0 4 -4 4 h-30 q-4 0 -4 -4 z" fill={SHOE} />
+            <path d="M82 304 h38 v4 q0 2 -3 2 h-32 q-3 0 -3 -2 z" fill={OUTLINE} stroke="none" />
+            <path d="M92 305 l7 4 M101 305 l7 4" stroke={OUTLINE} strokeWidth={1.6} fill="none" opacity={0.75} />
+          </g>
+        </g>
+
+        {/* Hood, behind the torso */}
           <path d="M50 150 q0 -22 30 -26 q30 4 30 26 q-14 12 -30 12 q-16 0 -30 -12 z" fill={HOODIE_LIGHT} stroke={OUTLINE} strokeWidth={2.5} />
 
           {/* Torso: hoodie */}

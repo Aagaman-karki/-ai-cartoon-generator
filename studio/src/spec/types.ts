@@ -30,7 +30,7 @@ export type Theme = {
  * derive from them, the validator checks against them and `Character`'s face table is typed by the
  * union, so a new value cannot be added in one place and forgotten in another.
  */
-export const CHARACTER_ACTIONS = ['idle', 'panicked'] as const;
+export const CHARACTER_ACTIONS = ['idle', 'panicked', 'walking'] as const;
 export type CharacterAction = (typeof CHARACTER_ACTIONS)[number];
 
 export const CHARACTER_EXPRESSIONS = [
