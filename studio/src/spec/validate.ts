@@ -70,6 +70,21 @@ const validateElement = (element: SceneElement, where: string, errors: string[])
       if (element.expression && !EXPRESSIONS.includes(element.expression))
         errors.push(`${where}: unknown expression "${element.expression}"`);
       if (element.scale !== undefined && !isNumber(element.scale)) errors.push(`${where}: scale must be a number`);
+      const movementValues = [element.moveToX, element.moveStart, element.moveDuration];
+      const hasMovement = movementValues.some((value) => value !== undefined);
+      const hasCompleteMovement = movementValues.every((value) => value !== undefined);
+
+      if (hasMovement && !hasCompleteMovement) {
+        errors.push(`${where}: moveToX, moveStart and moveDuration must be supplied together`);
+      }
+      if (hasCompleteMovement) {
+        if (!isNumber(element.moveToX) || !isNumber(element.moveStart) || !isNumber(element.moveDuration)) {
+          errors.push(`${where}: movement values must be finite numbers`);
+        } else {
+          if (element.moveStart < 0) errors.push(`${where}: moveStart cannot be negative`);
+          if (element.moveDuration <= 0) errors.push(`${where}: moveDuration must be greater than zero`);
+        }
+      }
       break;
     case 'text_overlay':
       if (typeof element.text !== 'string' || element.text.trim() === '')

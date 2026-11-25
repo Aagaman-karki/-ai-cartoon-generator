@@ -7,6 +7,34 @@ import { SPECS } from './specs';
 import { AnimationSpec } from './spec/types';
 import { timingFor, validateSpec } from './spec/validate';
 
+const baseMovementScene = SPECS[0].spec.scenes[0];
+
+const MOVEMENT_TEST_SPEC: AnimationSpec = {
+  ...SPECS[0].spec,
+  slug: 'movement-test',
+  title: 'Movement Test',
+  scenes: [
+    {
+      ...baseMovementScene,
+      id: 'movement-test-scene',
+      durationFrames: 180,
+      elements: [
+        ...baseMovementScene.elements.filter((element) => element.type !== 'character'),
+        {
+          type: 'character',
+          x: 320,
+          y: 900,
+          scale: 1.2,
+          expression: 'curious',
+          moveToX: 1500,
+          moveStart: 20,
+          moveDuration: 120,
+        },
+      ],
+    },
+  ],
+};
+
 /**
  * Remotion root: registers every renderable composition.
  *
@@ -89,6 +117,24 @@ export const RemotionRoot: React.FC = () => {
         height={1080}
         fps={30}
         durationInFrames={120}
+      />
+      <Composition
+        id='Walking-Test'
+        component={ExpressionTest}
+        defaultProps={{ action: 'walking', flip: false, shadow: true }}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={180}
+      />
+      <Composition
+        id='Movement-Test'
+        component={SpecMovie}
+        defaultProps={{ spec: MOVEMENT_TEST_SPEC }}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={180}
       />
       {SPECS.map(({ spec, timing }) => (
         <Composition

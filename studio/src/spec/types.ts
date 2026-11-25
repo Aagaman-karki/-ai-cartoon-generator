@@ -69,6 +69,12 @@ export type SceneElement =
       expression?: CharacterExpression;
       /** Frame (local to the scene) at which `action` began, so the pose springs instead of snapping. */
       actionStart?: number;
+      /** Horizontal destination in composition pixels. */
+      moveToX?: number;
+      /** Scene-local frame when movement begins. */
+      moveStart?: number;
+      /** Movement duration in frames. */
+      moveDuration?: number;
       flip?: boolean;
     }
   | {

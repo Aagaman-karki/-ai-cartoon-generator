@@ -34,6 +34,8 @@ export type CharacterProps = {
   expression?: CharacterExpression;
   /** Frame (local to the scene) at which the current `action` began, used to spring the pose. */
   actionStart?: number;
+  /** Frame at which walking should finish fading out. */
+  actionEnd?: number;
   /** Mirror the figure horizontally. */
   flip?: boolean;
   /** Draw the soft contact shadow under the feet. */
@@ -225,6 +227,7 @@ export const Character: React.FC<CharacterProps> = ({
   action = 'idle',
   expression = 'neutral',
   actionStart = 0,
+  actionEnd,
   flip = false,
   shadow = true,
 }) => {
@@ -245,13 +248,22 @@ export const Character: React.FC<CharacterProps> = ({
   const walking = action === 'walking';
 
   // Spring the walking action in smoothly from the idle pose.
-  const walkProgress = walking
+  const walkSpring = walking
     ? spring({
         frame: Math.max(0, frame - actionStart),
         fps,
         config: { damping: 16, stiffness: 100, mass: 0.8 },
       })
     : 0;
+
+  // Fade out the gait during the final 12 frames when an end frame is supplied.
+  const fadeProgress =
+    actionEnd === undefined
+      ? 1
+      : Math.max(0, Math.min(1, (actionEnd - frame) / 12));
+
+  const walkFade = fadeProgress * fadeProgress * (3 - 2 * fadeProgress);
+  const walkProgress = walkSpring * walkFade;
 
   const walkFrame = Math.max(0, frame - actionStart);
   const walkCycle = Math.sin(walkFrame * 0.22) * walkProgress;

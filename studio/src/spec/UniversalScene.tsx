@@ -63,24 +63,48 @@ const Fracture: React.FC<{
   );
 };
 
-const ElementView: React.FC<{ element: SceneElement; accent: string; accentAlt: string }> = ({
-  element,
-  accent,
-  accentAlt,
-}) => {
+const ElementView: React.FC<{
+  element: SceneElement;
+  accent: string;
+  accentAlt: string;
+  frame: number;
+}> = ({ element, accent, accentAlt, frame }) => {
   switch (element.type) {
-    case 'character':
+    case 'character': {
+      const moving =
+        element.moveToX !== undefined &&
+        element.moveStart !== undefined &&
+        element.moveDuration !== undefined;
+
+      const start = moving ? element.moveStart! : 0;
+      const end = moving ? start + element.moveDuration! : 0;
+
+      const progress = moving
+        ? Math.max(0, Math.min(1, (frame - start) / element.moveDuration!))
+        : 0;
+
+      const eased = progress * progress * (3 - 2 * progress);
+      const x = moving
+        ? element.x + (element.moveToX! - element.x) * eased
+        : element.x;
+
+      const isWalking = moving && frame >= start && frame < end;
+      const action = isWalking ? 'walking' : element.action ?? 'idle';
+      const automaticFlip = moving ? element.moveToX! < element.x : false;
+
       return (
         <Character
-          x={element.x}
+          x={x}
           y={element.y}
           scale={element.scale ?? 1}
-          action={element.action ?? 'idle'}
+          action={action}
           expression={element.expression ?? 'neutral'}
-          actionStart={element.actionStart ?? 0}
-          flip={element.flip ?? false}
+          actionStart={isWalking ? start : element.actionStart ?? 0}
+          actionEnd={isWalking ? end : undefined}
+          flip={element.flip ?? automaticFlip}
         />
       );
+    }
     case 'text_overlay':
       return (
         <Title
@@ -180,7 +204,13 @@ export const UniversalScene: React.FC<UniversalSceneProps> = ({
           duration={scene.durationFrames}
         />
         {scene.elements.map((element, index) => (
-          <ElementView key={`${element.type}-${index}`} element={element} accent={accent} accentAlt={accentAlt} />
+          <ElementView
+            key={`${element.type}-${index}`}
+            element={element}
+            accent={accent}
+            accentAlt={accentAlt}
+            frame={frame}
+          />
         ))}
       </AbsoluteFill>
     </AbsoluteFill>
